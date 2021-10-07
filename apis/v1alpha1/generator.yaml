@@ -13,4 +13,4 @@ ignore:
    - ServiceLinkedRole
    - ServiceSpecificCredential
    - User
-   - VirtualMFADevice
+   - VirtualMFADevice 

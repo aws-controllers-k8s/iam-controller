@@ -1,0 +1,26 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: ack-iam-writer
+  namespace: {{ .Release.Namespace }}
+rules:
+- apiGroups:
+  - iam.services.k8s.aws
+  resources:
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - iam.services.k8s.aws
+  resources:
+  verbs:
+  - get
+  - patch
+  - update
