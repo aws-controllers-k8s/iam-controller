@@ -1,0 +1,8 @@
+service:
+  full_name: "AWS Identity & Access Management"
+  short_name: "IAM"
+  link: "https://aws.amazon.com/iam/"
+  documentation: "https://docs.aws.amazon.com/IAM/latest/APIReference/welcome.html"
+api_versions:
+  - api_version: v1alpha1
+    status: available
