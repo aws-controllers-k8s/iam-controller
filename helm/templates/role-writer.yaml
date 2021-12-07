@@ -9,6 +9,8 @@ rules:
 - apiGroups:
   - iam.services.k8s.aws
   resources:
+  - roles
+
   verbs:
   - create
   - delete
@@ -20,6 +22,7 @@ rules:
 - apiGroups:
   - iam.services.k8s.aws
   resources:
+  - roles
   verbs:
   - get
   - patch

@@ -8,9 +8,38 @@ ignore:
    - OpenIDConnectProvider
    - Policy
    - PolicyVersion
-   - Role
+   #- Role
    - SAMLProvider
    - ServiceLinkedRole
    - ServiceSpecificCredential
    - User
    - VirtualMFADevice
+resources:
+  Role:
+    exceptions:
+      terminal_codes:
+        - InvalidInput
+        - MalformedPolicyDocument
+    renames:
+      operations:
+        CreateRole:
+          input_fields:
+            RoleName: Name
+        GetRole:
+          input_fields:
+            RoleName: Name
+        UpdateRole:
+          input_fields:
+            RoleName: Name
+        DeleteRole:
+          input_fields:
+            RoleName: Name
+    fields:
+      MaxSessionDuration:
+        late_initialize: {}
+      PermissionsBoundary:
+        set:
+          # The input and output shapes are different...
+          - from: PermissionsBoundary.PermissionsBoundaryArn
+      Path:
+        late_initialize: {}

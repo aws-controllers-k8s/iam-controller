@@ -3,8 +3,8 @@ module github.com/aws-controllers-k8s/iam-controller
 go 1.14
 
 require (
-	github.com/aws-controllers-k8s/runtime v0.14.1
-	github.com/aws/aws-sdk-go v1.37.10
+	github.com/aws-controllers-k8s/runtime v0.15.2
+	github.com/aws/aws-sdk-go v1.40.2
 	github.com/go-logr/logr v0.1.0
 	github.com/spf13/pflag v1.0.5
 	k8s.io/api v0.18.2

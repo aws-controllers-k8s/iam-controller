@@ -1,0 +1,1 @@
+ROLE_RESOURCE_PLURAL = 'roles'

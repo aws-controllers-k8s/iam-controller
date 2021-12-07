@@ -29,6 +29,26 @@ rules:
   - list
   - watch
 - apiGroups:
+  - iam.services.k8s.aws
+  resources:
+  - roles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - iam.services.k8s.aws
+  resources:
+  - roles/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - services.k8s.aws
   resources:
   - adoptedresources
