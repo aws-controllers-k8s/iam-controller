@@ -16,6 +16,11 @@ ignore:
    - VirtualMFADevice
 resources:
   Role:
+    hooks:
+      sdk_create_post_set_output:
+        template_path: hooks/role/sdk_create_post_set_output.go.tpl
+      sdk_update_post_set_output:
+        template_path: hooks/role/sdk_update_post_set_output.go.tpl
     exceptions:
       terminal_codes:
         - InvalidInput
