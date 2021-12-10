@@ -287,6 +287,11 @@ func (rm *resourceManager) sdkCreate(
 	}
 
 	rm.setStatusDefaults(ko)
+	// There really isn't a status of a role... it either exists or doesn't. If
+	// we get here, that means the creation was successful and the desired
+	// state of the role matches what we provided...
+	ackcondition.SetSynced(&resource{ko}, corev1.ConditionTrue, nil, nil)
+
 	return &resource{ko}, nil
 }
 
@@ -362,6 +367,11 @@ func (rm *resourceManager) sdkUpdate(
 	ko := desired.ko.DeepCopy()
 
 	rm.setStatusDefaults(ko)
+	// There really isn't a status of a role... it either exists or doesn't. If
+	// we get here, that means the update was successful and the desired state
+	// of the role matches what we provided...
+	ackcondition.SetSynced(&resource{ko}, corev1.ConditionTrue, nil, nil)
+
 	return &resource{ko}, nil
 }
 

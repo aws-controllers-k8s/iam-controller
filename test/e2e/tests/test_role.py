@@ -18,6 +18,7 @@ import time
 
 import pytest
 
+from acktest.k8s import condition
 from acktest.k8s import resource as k8s
 from acktest.resources import random_suffix_name
 from e2e import service_marker, CRD_GROUP, CRD_VERSION, load_resource
@@ -67,7 +68,8 @@ class TestRole:
         assert 'spec' in cr
         assert 'maxSessionDuration' in cr['spec']
         assert cr['spec']['maxSessionDuration'] == max_sess_duration
-        #condition.assert_synced(ref)
+
+        condition.assert_synced(ref)
 
         latest = role.get(role_name)
         assert latest is not None
