@@ -25,6 +25,26 @@ rules:
 - apiGroups:
   - iam.services.k8s.aws
   resources:
+  - policies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - iam.services.k8s.aws
+  resources:
+  - policies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - iam.services.k8s.aws
+  resources:
   - roles
   verbs:
   - create
