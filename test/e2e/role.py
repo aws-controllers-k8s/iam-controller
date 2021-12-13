@@ -100,3 +100,17 @@ def get(role_name):
         return resp['Role']
     except c.exceptions.NoSuchEntityException:
         return None
+
+
+def get_attached_policy_arns(role_name):
+    """Returns a list containing the policy ARNs that have been attached to the
+    supplied Role.
+
+    If no such Role exists, returns None.
+    """
+    c = boto3.client('iam')
+    try:
+        resp = c.list_attached_role_policies(RoleName=role_name)
+        return [p['PolicyArn'] for p in resp['AttachedPolicies']]
+    except c.exceptions.NoSuchEntityException:
+        return None

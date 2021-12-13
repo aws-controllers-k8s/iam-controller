@@ -155,6 +155,11 @@ func (rm *resourceManager) sdkFind(
 	} else {
 		ko.Spec.Tags = nil
 	}
+	if policies, err := rm.getPolicies(ctx, &resource{ko}); err != nil {
+		return nil, err
+	} else {
+		ko.Spec.Policies = policies
+	}
 
 	rm.setStatusDefaults(ko)
 	return &resource{ko}, nil
@@ -287,6 +292,9 @@ func (rm *resourceManager) sdkCreate(
 	}
 
 	rm.setStatusDefaults(ko)
+	if err := rm.syncPolicies(ctx, &resource{ko}); err != nil {
+		return nil, err
+	}
 	// There really isn't a status of a role... it either exists or doesn't. If
 	// we get here, that means the creation was successful and the desired
 	// state of the role matches what we provided...
@@ -367,6 +375,9 @@ func (rm *resourceManager) sdkUpdate(
 	ko := desired.ko.DeepCopy()
 
 	rm.setStatusDefaults(ko)
+	if err := rm.syncPolicies(ctx, &resource{ko}); err != nil {
+		return nil, err
+	}
 	// There really isn't a status of a role... it either exists or doesn't. If
 	// we get here, that means the update was successful and the desired state
 	// of the role matches what we provided...
@@ -404,6 +415,11 @@ func (rm *resourceManager) sdkDelete(
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.sdkDelete")
 	defer exit(err)
+	// This causes syncPolicies to delete all associated policies from the role
+	r.ko.Spec.Policies = []*string{}
+	if err := rm.syncPolicies(ctx, r); err != nil {
+		return nil, err
+	}
 	input, err := rm.newDeleteRequestPayload(r)
 	if err != nil {
 		return nil, err
