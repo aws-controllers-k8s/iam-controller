@@ -6,7 +6,7 @@ ignore:
    - InstanceProfile
    - LoginProfile
    - OpenIDConnectProvider
-   - Policy
+   #- Policy
    - PolicyVersion
    #- Role
    - SAMLProvider
@@ -15,6 +15,46 @@ ignore:
    - User
    - VirtualMFADevice
 resources:
+  Policy:
+    renames:
+      operations:
+        CreatePolicy:
+          input_fields:
+            PolicyName: Name
+        GetPolicy:
+          input_fields:
+            PolicyName: Name
+        DeletePolicy:
+          input_fields:
+            PolicyName: Name
+    hooks:
+      sdk_create_post_set_output:
+        template_path: hooks/policy/sdk_create_post_set_output.go.tpl
+    exceptions:
+      terminal_codes:
+        - InvalidInput
+        - MalformedPolicyDocument
+    fields:
+      Description:
+        # You might be wondering why description is late-initialized, since
+        # there isn't a default server-side value for description.
+        #
+        # The CreatePolicy API call accepts a Description field in the input
+        # and the documentation (and API model) say that a Description field is
+        # included in the returned response from CreatePolicy, however the
+        # Description returned from the CreatePolicy API call is always
+        # missing/nil which means the SetResource code sets the
+        # Spec.Description to nil. When the next time the GetPolicy API call is
+        # made in the next reconciliation loop, GetPolicy returns the
+        # description that was originally set in the CreatePolicy API call and
+        # a Delta difference is discovered erroneously (because the SetResource
+        # call after CreatePolicy incorrectly set the description to nil). So,
+        # we set the late initialize property of the Description field here to
+        # override the Spec.Description to the original value we set in the
+        # CreatePolicy *input* shape.
+        late_initialize: {}
+      Path:
+        late_initialize: {}
   Role:
     hooks:
       sdk_create_post_set_output:

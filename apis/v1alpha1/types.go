@@ -106,7 +106,8 @@ type AttachedPolicy struct {
 	//
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the Amazon Web Services General Reference.
-	PolicyARN *string `json:"policyARN,omitempty"`
+	PolicyARN  *string `json:"policyARN,omitempty"`
+	PolicyName *string `json:"policyName,omitempty"`
 }
 
 // An object that contains details about when the IAM entities (users or roles)
@@ -240,11 +241,17 @@ type ManagedPolicyDetail struct {
 	//
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the Amazon Web Services General Reference.
-	ARN          *string      `json:"arn,omitempty"`
-	CreateDate   *metav1.Time `json:"createDate,omitempty"`
-	IsAttachable *bool        `json:"isAttachable,omitempty"`
-	PolicyID     *string      `json:"policyID,omitempty"`
-	UpdateDate   *metav1.Time `json:"updateDate,omitempty"`
+	ARN                           *string      `json:"arn,omitempty"`
+	AttachmentCount               *int64       `json:"attachmentCount,omitempty"`
+	CreateDate                    *metav1.Time `json:"createDate,omitempty"`
+	DefaultVersionID              *string      `json:"defaultVersionID,omitempty"`
+	Description                   *string      `json:"description,omitempty"`
+	IsAttachable                  *bool        `json:"isAttachable,omitempty"`
+	Path                          *string      `json:"path,omitempty"`
+	PermissionsBoundaryUsageCount *int64       `json:"permissionsBoundaryUsageCount,omitempty"`
+	PolicyID                      *string      `json:"policyID,omitempty"`
+	PolicyName                    *string      `json:"policyName,omitempty"`
+	UpdateDate                    *metav1.Time `json:"updateDate,omitempty"`
 }
 
 // Contains the Amazon Resource Name (ARN) for an IAM OpenID Connect provider.
@@ -282,34 +289,13 @@ type PermissionsBoundaryDecisionDetail struct {
 	AllowedByPermissionsBoundary *bool `json:"allowedByPermissionsBoundary,omitempty"`
 }
 
-// Contains information about a managed policy.
-//
-// This data type is used as a response element in the CreatePolicy, GetPolicy,
-// and ListPolicies operations.
-//
-// For more information about managed policies, refer to Managed policies and
-// inline policies (https://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
-// in the IAM User Guide.
-type Policy struct {
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for Amazon Web
-	// Services resources.
-	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
-	// in the Amazon Web Services General Reference.
-	ARN          *string      `json:"arn,omitempty"`
-	CreateDate   *metav1.Time `json:"createDate,omitempty"`
-	IsAttachable *bool        `json:"isAttachable,omitempty"`
-	PolicyID     *string      `json:"policyID,omitempty"`
-	Tags         []*Tag       `json:"tags,omitempty"`
-	UpdateDate   *metav1.Time `json:"updateDate,omitempty"`
-}
-
 // Contains information about an IAM policy, including the policy document.
 //
 // This data type is used as a response element in the GetAccountAuthorizationDetails
 // operation.
 type PolicyDetail struct {
 	PolicyDocument *string `json:"policyDocument,omitempty"`
+	PolicyName     *string `json:"policyName,omitempty"`
 }
 
 // Contains details about the permissions policies that are attached to the
@@ -323,7 +309,8 @@ type PolicyGrantingServiceAccess struct {
 	//
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the Amazon Web Services General Reference.
-	PolicyARN *string `json:"policyARN,omitempty"`
+	PolicyARN  *string `json:"policyARN,omitempty"`
+	PolicyName *string `json:"policyName,omitempty"`
 }
 
 // Contains information about a group that a managed policy is attached to.
@@ -376,6 +363,35 @@ type PolicyVersion struct {
 	CreateDate       *metav1.Time `json:"createDate,omitempty"`
 	Document         *string      `json:"document,omitempty"`
 	IsDefaultVersion *bool        `json:"isDefaultVersion,omitempty"`
+	VersionID        *string      `json:"versionID,omitempty"`
+}
+
+// Contains information about a managed policy.
+//
+// This data type is used as a response element in the CreatePolicy, GetPolicy,
+// and ListPolicies operations.
+//
+// For more information about managed policies, refer to Managed policies and
+// inline policies (https://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
+// in the IAM User Guide.
+type Policy_SDK struct {
+	// The Amazon Resource Name (ARN). ARNs are unique identifiers for Amazon Web
+	// Services resources.
+	//
+	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// in the Amazon Web Services General Reference.
+	ARN                           *string      `json:"arn,omitempty"`
+	AttachmentCount               *int64       `json:"attachmentCount,omitempty"`
+	CreateDate                    *metav1.Time `json:"createDate,omitempty"`
+	DefaultVersionID              *string      `json:"defaultVersionID,omitempty"`
+	Description                   *string      `json:"description,omitempty"`
+	IsAttachable                  *bool        `json:"isAttachable,omitempty"`
+	Path                          *string      `json:"path,omitempty"`
+	PermissionsBoundaryUsageCount *int64       `json:"permissionsBoundaryUsageCount,omitempty"`
+	PolicyID                      *string      `json:"policyID,omitempty"`
+	PolicyName                    *string      `json:"policyName,omitempty"`
+	Tags                          []*Tag       `json:"tags,omitempty"`
+	UpdateDate                    *metav1.Time `json:"updateDate,omitempty"`
 }
 
 // Contains information about an IAM role, including all of the role's policies.

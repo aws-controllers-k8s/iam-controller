@@ -1,1 +1,2 @@
 ROLE_RESOURCE_PLURAL = 'roles'
+POLICY_RESOURCE_PLURAL = 'policies'

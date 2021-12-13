@@ -9,6 +9,8 @@ rules:
 - apiGroups:
   - iam.services.k8s.aws
   resources:
+  - policies
+
   - roles
 
   verbs:
@@ -22,6 +24,7 @@ rules:
 - apiGroups:
   - iam.services.k8s.aws
   resources:
+  - policies
   - roles
   verbs:
   - get
