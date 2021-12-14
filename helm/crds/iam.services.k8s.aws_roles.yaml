@@ -99,17 +99,7 @@ spec:
                 type: string
               policies:
                 items:
-                  properties:
-                    policyARN:
-                      description: "The Amazon Resource Name (ARN). ARNs are unique
-                        identifiers for Amazon Web Services resources. \n For more
-                        information about ARNs, go to Amazon Resource Names (ARNs)
-                        (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
-                        in the Amazon Web Services General Reference."
-                      type: string
-                    roleName:
-                      type: string
-                  type: object
+                  type: string
                 type: array
               tags:
                 description: "A list of tags that you want to attach to the new role.
