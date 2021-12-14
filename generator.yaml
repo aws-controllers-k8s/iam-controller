@@ -57,6 +57,8 @@ resources:
         late_initialize: {}
   Role:
     hooks:
+      sdk_read_one_post_set_output:
+        template_path: hooks/role/sdk_read_one_post_set_output.go.tpl
       sdk_create_post_set_output:
         template_path: hooks/role/sdk_create_post_set_output.go.tpl
       sdk_update_post_set_output:
@@ -88,3 +90,9 @@ resources:
           - from: PermissionsBoundary.PermissionsBoundaryArn
       Path:
         late_initialize: {}
+      # In order to support attaching zero or more policies to a role, we use
+      # custom update code path code that uses the Attach/DetachRolePolicy API
+      # calls to manage the set of PolicyARNs attached to this Role.
+      Policies:
+        custom_field:
+          list_of: AttachRolePolicyInput.PolicyArn

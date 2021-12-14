@@ -97,6 +97,10 @@ spec:
                 description: The ARN of the policy that is used to set the permissions
                   boundary for the role.
                 type: string
+              policies:
+                items:
+                  type: string
+                type: array
               tags:
                 description: "A list of tags that you want to attach to the new role.
                   Each tag consists of a key name and an associated value. For more

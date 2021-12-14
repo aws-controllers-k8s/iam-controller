@@ -89,6 +89,8 @@ type RoleSpec struct {
 	// The ARN of the policy that is used to set the permissions boundary for the
 	// role.
 	PermissionsBoundary *string `json:"permissionsBoundary,omitempty"`
+
+	Policies []*string `json:"policies,omitempty"`
 	// A list of tags that you want to attach to the new role. Each tag consists
 	// of a key name and an associated value. For more information about tagging,
 	// see Tagging IAM resources (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_tags.html)

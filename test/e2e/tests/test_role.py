@@ -90,6 +90,19 @@ class TestRole:
         assert latest is not None
         assert latest['MaxSessionDuration'] == new_max_sess_duration
 
+        # Test the code paths that synchronize the attached policies for a role
+        policy_arns = [
+            "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
+        ]
+        updates = {
+            "spec": {"policies": policy_arns},
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        latest_policy_arns = role.get_attached_policy_arns(role_name)
+        assert latest_policy_arns == policy_arns
+
         k8s.delete_custom_resource(ref)
 
         time.sleep(DELETE_WAIT_AFTER_SECONDS)

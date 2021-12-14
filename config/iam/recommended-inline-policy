@@ -11,7 +11,10 @@
                 "iam:UpdateRole".
                 "iam:GetPolicy",
                 "iam:CreatePolicy",
-                "iam:DeletePolicy"
+                "iam:DeletePolicy",
+                "iam:ListAttachedRolePolicies",
+                "iam:AttachRolePolicy",
+                "iam:DetachRolePolicy"
             ],
             "Resource": "*"
         }
