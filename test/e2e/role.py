@@ -114,3 +114,17 @@ def get_attached_policy_arns(role_name):
         return [p['PolicyArn'] for p in resp['AttachedPolicies']]
     except c.exceptions.NoSuchEntityException:
         return None
+
+
+def get_tags(role_name):
+    """Returns a list containing the tags that have been associated to the
+    supplied Role.
+
+    If no such Role exists, returns None.
+    """
+    c = boto3.client('iam')
+    try:
+        resp = c.list_role_tags(RoleName=role_name)
+        return resp['Tags']
+    except c.exceptions.NoSuchEntityException:
+        return None

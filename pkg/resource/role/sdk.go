@@ -160,6 +160,11 @@ func (rm *resourceManager) sdkFind(
 	} else {
 		ko.Spec.Policies = policies
 	}
+	if tags, err := rm.getTags(ctx, &resource{ko}); err != nil {
+		return nil, err
+	} else {
+		ko.Spec.Tags = tags
+	}
 
 	rm.setStatusDefaults(ko)
 	return &resource{ko}, nil
@@ -376,6 +381,9 @@ func (rm *resourceManager) sdkUpdate(
 
 	rm.setStatusDefaults(ko)
 	if err := rm.syncPolicies(ctx, &resource{ko}); err != nil {
+		return nil, err
+	}
+	if err := rm.syncTags(ctx, &resource{ko}); err != nil {
 		return nil, err
 	}
 	// There really isn't a status of a role... it either exists or doesn't. If

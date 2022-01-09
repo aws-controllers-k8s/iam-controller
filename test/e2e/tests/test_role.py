@@ -103,6 +103,36 @@ class TestRole:
         latest_policy_arns = role.get_attached_policy_arns(role_name)
         assert latest_policy_arns == policy_arns
 
+        # Same update code path check for tags...
+        latest_tags = role.get_tags(role_name)
+        before_update_expected_tags = [
+            {
+                "Key": "tag1",
+                "Value": "val1"
+            }
+        ]
+        assert latest_tags == before_update_expected_tags
+        new_tags = [
+            {
+                "key": "tag2",
+                "value": "val2",
+            }
+        ]
+        updates = {
+            "spec": {"tags": new_tags},
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        after_update_expected_tags = [
+            {
+                "Key": "tag2",
+                "Value": "val2",
+            }
+        ]
+        latest_tags = role.get_tags(role_name)
+        assert latest_tags == after_update_expected_tags
+
         k8s.delete_custom_resource(ref)
 
         time.sleep(DELETE_WAIT_AFTER_SECONDS)
