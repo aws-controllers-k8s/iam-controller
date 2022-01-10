@@ -14,7 +14,10 @@
                 "iam:DeletePolicy",
                 "iam:ListAttachedRolePolicies",
                 "iam:AttachRolePolicy",
-                "iam:DetachRolePolicy"
+                "iam:DetachRolePolicy",
+                "iam:ListRoleTags",
+                "iam:TagRole",
+                "iam:UntagRole"
             ],
             "Resource": "*"
         }
