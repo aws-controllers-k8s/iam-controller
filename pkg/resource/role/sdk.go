@@ -155,6 +155,8 @@ func (rm *resourceManager) sdkFind(
 	} else {
 		ko.Spec.Tags = nil
 	}
+
+	rm.setStatusDefaults(ko)
 	if policies, err := rm.getPolicies(ctx, &resource{ko}); err != nil {
 		return nil, err
 	} else {
@@ -166,7 +168,6 @@ func (rm *resourceManager) sdkFind(
 		ko.Spec.Tags = tags
 	}
 
-	rm.setStatusDefaults(ko)
 	return &resource{ko}, nil
 }
 
@@ -428,6 +429,7 @@ func (rm *resourceManager) sdkDelete(
 	if err := rm.syncPolicies(ctx, r); err != nil {
 		return nil, err
 	}
+
 	input, err := rm.newDeleteRequestPayload(r)
 	if err != nil {
 		return nil, err
