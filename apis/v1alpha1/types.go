@@ -72,16 +72,6 @@ type AccessKeyMetadata struct {
 	CreateDate *metav1.Time `json:"createDate,omitempty"`
 }
 
-type AttachRolePolicyInput struct {
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for Amazon Web
-	// Services resources.
-	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
-	// in the Amazon Web Services General Reference.
-	PolicyARN *string `json:"policyARN,omitempty"`
-	RoleName  *string `json:"roleName,omitempty"`
-}
-
 // Contains information about an attached permissions boundary.
 //
 // An attached permissions boundary is a managed policy that has been attached
