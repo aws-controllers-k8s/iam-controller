@@ -35,7 +35,7 @@ MODIFY_WAIT_AFTER_SECONDS = 10
 @pytest.mark.canary
 class TestRole:
     def test_crud(self):
-        role_name = "my-simple-role"
+        role_name = random_suffix_name("my-simple-role", 24)
         role_desc = "a simple role"
         max_sess_duration = 3600 # Note: minimum of 3600 seconds...
 

@@ -19,6 +19,7 @@ import pytest
 
 from acktest.k8s import condition
 from acktest.k8s import resource as k8s
+from acktest.resources import random_suffix_name
 from e2e import service_marker, CRD_GROUP, CRD_VERSION, load_resource
 from e2e.common.types import POLICY_RESOURCE_PLURAL
 from e2e.replacement_values import REPLACEMENT_VALUES
@@ -32,7 +33,7 @@ CHECK_WAIT_AFTER_SECONDS = 10
 @pytest.mark.canary
 class TestPolicy:
     def test_crud(self):
-        policy_name = "my-simple-policy"
+        policy_name = random_suffix_name("my-simple-policy", 24)
         policy_desc = "a simple policy"
 
         replacements = REPLACEMENT_VALUES.copy()
