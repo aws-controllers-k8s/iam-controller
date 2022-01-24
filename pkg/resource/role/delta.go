@@ -83,7 +83,7 @@ func newResourceDelta(
 			delta.Add("Spec.PermissionsBoundary", a.ko.Spec.PermissionsBoundary, b.ko.Spec.PermissionsBoundary)
 		}
 	}
-	if !reflect.DeepEqual(a.ko.Spec.Policies, b.ko.Spec.Policies) {
+	if !ackcompare.SliceStringPEqual(a.ko.Spec.Policies, b.ko.Spec.Policies) {
 		delta.Add("Spec.Policies", a.ko.Spec.Policies, b.ko.Spec.Policies)
 	}
 	if !reflect.DeepEqual(a.ko.Spec.Tags, b.ko.Spec.Tags) {
