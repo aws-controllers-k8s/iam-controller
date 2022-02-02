@@ -108,7 +108,13 @@ class TestPolicy:
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
         latest_tags = policy.get_tags(policy_arn)
-        assert latest_tags == new_tags
+        after_update_expected_tags = [
+            {
+                "Key": "tag2",
+                "Value": "val3",
+            }
+        ]
+        assert latest_tags == after_update_expected_tags
 
         k8s.delete_custom_resource(ref)
 
