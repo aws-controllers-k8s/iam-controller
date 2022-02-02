@@ -87,14 +87,28 @@ class TestPolicy:
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
+        latest_tags = policy.get_tags(policy_arn)
         after_update_expected_tags = [
             {
                 "Key": "tag2",
                 "Value": "val2",
             }
         ]
-        latest_tags = policy.get_tags(policy_arn)
         assert latest_tags == after_update_expected_tags
+        new_tags = [
+            {
+                "key": "tag2",
+                "value": "val3", # Update the value
+            }
+        ]
+        updates = {
+            "spec": {"tags": new_tags},
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        latest_tags = policy.get_tags(policy_arn)
+        assert latest_tags == new_tags
 
         k8s.delete_custom_resource(ref)
 
