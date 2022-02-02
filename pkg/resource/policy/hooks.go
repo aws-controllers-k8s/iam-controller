@@ -76,20 +76,20 @@ func (rm *resourceManager) syncTags(
 		}
 	}
 
-	if len(toAdd) > 0 {
-		for _, t := range toAdd {
-			rlog.Debug("adding tag to policy", "key", *t.Key, "value", *t.Value)
-		}
-		if err = rm.addTags(ctx, r, toAdd); err != nil {
-			return err
-		}
-	}
-
 	if len(toDelete) > 0 {
 		for _, t := range toDelete {
 			rlog.Debug("removing tag from policy", "key", *t.Key, "value", *t.Value)
 		}
 		if err = rm.removeTags(ctx, r, toDelete); err != nil {
+			return err
+		}
+	}
+
+	if len(toAdd) > 0 {
+		for _, t := range toAdd {
+			rlog.Debug("adding tag to policy", "key", *t.Key, "value", *t.Value)
+		}
+		if err = rm.addTags(ctx, r, toAdd); err != nil {
 			return err
 		}
 	}

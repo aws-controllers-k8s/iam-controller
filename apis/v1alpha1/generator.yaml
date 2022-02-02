@@ -32,9 +32,13 @@ resources:
         template_path: hooks/policy/sdk_read_one_post_set_output.go.tpl
       sdk_create_post_set_output:
         template_path: hooks/policy/sdk_create_post_set_output.go.tpl
-      sdk_update_post_set_output:
-        template_path: hooks/policy/sdk_update_post_set_output.go.tpl
     update_operation:
+      # There is no `UpdatePolicy` API operation. The only way to update a 
+      # policy is to update the properties individually (only a few properties
+      # support this) or to delete the policy and recreate it entirely. 
+      #
+      # This custom method will support updating the properties individually,
+      # but there is currently no support for the delete/create option.
       custom_method_name: customUpdatePolicy
     exceptions:
       terminal_codes:
