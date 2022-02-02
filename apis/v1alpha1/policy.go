@@ -60,6 +60,8 @@ type PolicySpec struct {
 	// can contain any ASCII character from the ! (\u0021) through the DEL character
 	// (\u007F), including most punctuation characters, digits, and upper and lowercased
 	// letters.
+	//
+	// You cannot use an asterisk (*) in the path name.
 	Path *string `json:"path,omitempty"`
 	// The JSON policy document that you want to use as the content for the new
 	// policy.

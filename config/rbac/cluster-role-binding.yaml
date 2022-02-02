@@ -8,5 +8,5 @@ roleRef:
   name: ack-iam-controller
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: ack-iam-controller
   namespace: ack-system
