@@ -155,6 +155,12 @@ func (rm *resourceManager) sdkFind(
 	}
 
 	rm.setStatusDefaults(ko)
+	if tags, err := rm.getTags(ctx, &resource{ko}); err != nil {
+		return nil, err
+	} else {
+		ko.Spec.Tags = tags
+	}
+
 	return &resource{ko}, nil
 }
 
@@ -339,8 +345,7 @@ func (rm *resourceManager) sdkUpdate(
 	latest *resource,
 	delta *ackcompare.Delta,
 ) (*resource, error) {
-	// TODO(jaypipes): Figure this out...
-	return nil, ackerr.NotImplemented
+	return rm.customUpdatePolicy(ctx, desired, latest, delta)
 }
 
 // sdkDelete deletes the supplied resource in the backend AWS service API

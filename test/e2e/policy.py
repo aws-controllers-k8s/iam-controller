@@ -100,3 +100,16 @@ def get(policy_arn):
         return resp['Policy']
     except c.exceptions.NoSuchEntityException:
         return None
+
+def get_tags(policy_arn):
+    """Returns a list containing the tags that have been associated to the
+    supplied Policy.
+
+    If no such Policy exists, returns None.
+    """
+    c = boto3.client('iam')
+    try:
+        resp = c.list_policy_tags(PolicyArn=policy_arn)
+        return resp['Tags']
+    except c.exceptions.NoSuchEntityException:
+        return None

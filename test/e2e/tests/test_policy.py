@@ -27,6 +27,7 @@ from e2e import policy
 
 DELETE_WAIT_AFTER_SECONDS = 10
 CHECK_WAIT_AFTER_SECONDS = 10
+MODIFY_WAIT_AFTER_SECONDS = 10
 
 
 @service_marker
@@ -64,6 +65,56 @@ class TestPolicy:
         condition.assert_synced(ref)
 
         policy.wait_until_exists(policy_arn)
+
+         # Same update code path check for tags...
+        latest_tags = policy.get_tags(policy_arn)
+        before_update_expected_tags = [
+            {
+                "Key": "tag1",
+                "Value": "val1"
+            }
+        ]
+        assert latest_tags == before_update_expected_tags
+        new_tags = [
+            {
+                "key": "tag2",
+                "value": "val2",
+            }
+        ]
+        updates = {
+            "spec": {"tags": new_tags},
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        latest_tags = policy.get_tags(policy_arn)
+        after_update_expected_tags = [
+            {
+                "Key": "tag2",
+                "Value": "val2",
+            }
+        ]
+        assert latest_tags == after_update_expected_tags
+        new_tags = [
+            {
+                "key": "tag2",
+                "value": "val3", # Update the value
+            }
+        ]
+        updates = {
+            "spec": {"tags": new_tags},
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        latest_tags = policy.get_tags(policy_arn)
+        after_update_expected_tags = [
+            {
+                "Key": "tag2",
+                "Value": "val3",
+            }
+        ]
+        assert latest_tags == after_update_expected_tags
 
         k8s.delete_custom_resource(ref)
 

@@ -199,7 +199,7 @@ func inTags(
 	return false
 }
 
-// getTags returns the list of Policy ARNs currently attached to the Role
+// getTags returns the list of tags to the Role
 func (rm *resourceManager) getTags(
 	ctx context.Context,
 	r *resource,
