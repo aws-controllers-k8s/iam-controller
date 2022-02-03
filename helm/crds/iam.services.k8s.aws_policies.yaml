@@ -64,7 +64,8 @@ spec:
                   a string that must begin and end with forward slashes. In addition,
                   it can contain any ASCII character from the ! (\\u0021) through
                   the DEL character (\\u007F), including most punctuation characters,
-                  digits, and upper and lowercased letters."
+                  digits, and upper and lowercased letters. \n You cannot use an asterisk
+                  (*) in the path name."
                 type: string
               policyDocument:
                 description: "The JSON policy document that you want to use as the
