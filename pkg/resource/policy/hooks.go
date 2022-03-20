@@ -15,6 +15,9 @@ package policy
 
 import (
 	"context"
+	"net/url"
+	"sort"
+	"time"
 
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	ackcondition "github.com/aws-controllers-k8s/runtime/pkg/condition"
@@ -23,6 +26,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
+)
+
+const (
+	// limitPolicyVersions is the max allowed number of policy versions you can
+	// have before needing to delete a policy version.
+	//
+	// https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreatePolicyVersion.html
+	limitPolicyVersions = 5
 )
 
 func (rm *resourceManager) customUpdatePolicy(
@@ -35,9 +46,20 @@ func (rm *resourceManager) customUpdatePolicy(
 
 	rm.setStatusDefaults(ko)
 
-	if err := rm.syncTags(ctx, &resource{ko}); err != nil {
-		return nil, err
+	if delta.DifferentAt("Spec.Tags") {
+		if err := rm.syncTags(ctx, &resource{ko}); err != nil {
+			return nil, err
+		}
 	}
+
+	if delta.DifferentAt("Spec.PolicyDocument") {
+		newVersionID, err := rm.updatePolicyDocument(ctx, desired)
+		if err != nil {
+			return nil, err
+		}
+		ko.Status.DefaultVersionID = &newVersionID
+	}
+
 	// There really isn't a status of a policy... it either exists or doesn't.
 	// If we get here, that means the update was successful and the desired
 	// state of the policy matches what we provided...
@@ -55,7 +77,9 @@ func (rm *resourceManager) syncTags(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.syncTags")
-	defer exit(err)
+	defer func(err error) {
+		exit(err)
+	}(err)
 	toAdd := []*svcapitypes.Tag{}
 	toDelete := []*svcapitypes.Tag{}
 
@@ -124,7 +148,9 @@ func (rm *resourceManager) getTags(
 	var resp *svcsdk.ListPolicyTagsOutput
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.getTags")
-	defer exit(err)
+	defer func(err error) {
+		exit(err)
+	}(err)
 
 	input := &svcsdk.ListPolicyTagsInput{}
 	input.PolicyArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
@@ -141,8 +167,9 @@ func (rm *resourceManager) getTags(
 		if resp.IsTruncated != nil && !*resp.IsTruncated {
 			break
 		}
+		input.SetMarker(*resp.Marker)
+		rm.metrics.RecordAPICall("READ_MANY", "ListPolicyTags", err)
 	}
-	rm.metrics.RecordAPICall("GET", "ListPolicyTags", err)
 	return res, err
 }
 
@@ -154,7 +181,9 @@ func (rm *resourceManager) addTags(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.addTags")
-	defer exit(err)
+	defer func(err error) {
+		exit(err)
+	}(err)
 
 	input := &svcsdk.TagPolicyInput{}
 	input.PolicyArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
@@ -165,7 +194,7 @@ func (rm *resourceManager) addTags(
 	input.Tags = inTags
 
 	_, err = rm.sdkapi.TagPolicyWithContext(ctx, input)
-	rm.metrics.RecordAPICall("CREATE", "TagPolicy", err)
+	rm.metrics.RecordAPICall("UPDATE", "TagPolicy", err)
 	return err
 }
 
@@ -177,7 +206,9 @@ func (rm *resourceManager) removeTags(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.removeTags")
-	defer exit(err)
+	defer func(err error) {
+		exit(err)
+	}(err)
 
 	input := &svcsdk.UntagPolicyInput{}
 	input.PolicyArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
@@ -188,6 +219,252 @@ func (rm *resourceManager) removeTags(
 	input.TagKeys = inTagKeys
 
 	_, err = rm.sdkapi.UntagPolicyWithContext(ctx, input)
-	rm.metrics.RecordAPICall("DELETE", "UntagPolicy", err)
+	rm.metrics.RecordAPICall("UPDATE", "UntagPolicy", err)
 	return err
+}
+
+// updatePolicyDocument creates a new Policy version with the new
+// PolicyDocument and returns the newly-created version ID.
+//
+// A policy is technically immutable. In order to modify the PolicyDocument,
+// one calls the CreatePolicyVersion API call and creates a new Policy version
+// with the updated PolicyDocument.
+func (rm *resourceManager) updatePolicyDocument(
+	ctx context.Context,
+	r *resource,
+) (string, error) {
+	var err error
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.updatePolicyDocument")
+	defer func(err error) {
+		exit(err)
+	}(err)
+
+	policyARN := (*string)(r.ko.Status.ACKResourceMetadata.ARN)
+
+	if err = rm.ensureVersionsLimitNotExceeded(ctx, *policyARN); err != nil {
+		return "", err
+	}
+
+	input := &svcsdk.CreatePolicyVersionInput{}
+	input.PolicyArn = policyARN
+	input.PolicyDocument = r.ko.Spec.PolicyDocument
+
+	trueVal := true
+	input.SetAsDefault = &trueVal
+
+	resp, err := rm.sdkapi.CreatePolicyVersionWithContext(ctx, input)
+	rm.metrics.RecordAPICall("UPDATE", "CreatePolicyVersion", err)
+	if err != nil {
+		return "", err
+	}
+	return *resp.PolicyVersion.VersionId, err
+}
+
+// ensureVersionsLimitNotExceeded checks to see if the number of versions
+// for a supplied managed policy ARN exceeds 4 and deletes the oldest policy
+// version if so.
+//
+// According to the IAM docs:
+//
+// > A managed policy can have up to five versions. If the policy has five
+// > versions, you must delete an existing version using DeletePolicyVersion
+// > before you create a new version.
+//
+// https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreatePolicyVersion.html
+func (rm *resourceManager) ensureVersionsLimitNotExceeded(
+	ctx context.Context,
+	policyARN string,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.ensureVersionsLimitNotExceeded")
+	defer func(err error) {
+		exit(err)
+	}(err)
+
+	versions, err := rm.getPolicyVersions(ctx, policyARN)
+	if err != nil {
+		return err
+	}
+
+	if len(versions) == limitPolicyVersions {
+		for _, v := range versions {
+			if v.isDefault {
+				continue
+			}
+			err = rm.deletePolicyVersion(ctx, policyARN, v.version)
+			if err != nil {
+				return err
+			}
+			rlog.Info(
+				"exceeded limit of policy versions. deleted earliest policy "+
+					"version (non-default) before adding new version.",
+				"policy_version", v.version,
+			)
+			break
+		}
+	}
+
+	return nil
+}
+
+type policyVersion struct {
+	version    string
+	createDate *time.Time
+	document   string
+	isDefault  bool
+}
+
+// getPolicyVersion gets the specified policy version from the supplied policy
+func (rm *resourceManager) getPolicyVersion(
+	ctx context.Context,
+	policyARN string,
+	version string,
+) (pv *policyVersion, err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.getPolicyVersion")
+	defer func(err error) {
+		exit(err)
+	}(err)
+
+	input := &svcsdk.GetPolicyVersionInput{}
+	input.SetPolicyArn(policyARN)
+	input.SetVersionId(version)
+
+	var resp *svcsdk.GetPolicyVersionOutput
+	resp, err = rm.sdkapi.GetPolicyVersionWithContext(ctx, input)
+	rm.metrics.RecordAPICall("READ_ONE", "GetPolicyVersion", err)
+
+	if err != nil {
+		return nil, err
+	}
+	pv = &policyVersion{}
+	if resp.PolicyVersion != nil {
+		pv.createDate = resp.PolicyVersion.CreateDate
+		if resp.PolicyVersion.VersionId != nil {
+			pv.version = *resp.PolicyVersion.VersionId
+		}
+		if resp.PolicyVersion.Document != nil {
+			// The policy document is URL-encoded by default, which leads to
+			// false positive deltas...
+			rawDoc := *resp.PolicyVersion.Document
+			doc, err := url.QueryUnescape(rawDoc)
+			if err != nil {
+				return nil, err
+			}
+			pv.document = doc
+		}
+		if resp.PolicyVersion.IsDefaultVersion != nil {
+			pv.isDefault = *resp.PolicyVersion.IsDefaultVersion
+		}
+	}
+	return pv, nil
+}
+
+// getPolicyVersions returns a slice, sorted by creation date, of the policy
+// versions for a supplied Policy ARN.
+func (rm *resourceManager) getPolicyVersions(
+	ctx context.Context,
+	policyARN string,
+) (versions []policyVersion, err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.getPolicyVersions")
+	defer func(err error) {
+		exit(err)
+	}(err)
+
+	input := &svcsdk.ListPolicyVersionsInput{}
+	input.SetPolicyArn(policyARN)
+
+	var resp *svcsdk.ListPolicyVersionsOutput
+	versions = []policyVersion{}
+	for {
+		resp, err = rm.sdkapi.ListPolicyVersionsWithContext(ctx, input)
+		if err != nil || resp == nil {
+			break
+		}
+		for _, v := range resp.Versions {
+			// NOTE(jaypipes): Deliberately skipping the PolicyDocument because
+			// we don't use this information in callers of this function. The
+			// singular getPolicyVersion() method *does* return the
+			// PolicyDocument, however, and that method is called to populate
+			// the Spec.PolicyDocument in sdkFind()
+			pv := policyVersion{
+				version:    *v.VersionId,
+				createDate: v.CreateDate,
+				isDefault:  *v.IsDefaultVersion,
+			}
+			versions = append(versions, pv)
+		}
+		if resp.IsTruncated != nil && !*resp.IsTruncated {
+			break
+		}
+		input.SetMarker(*resp.Marker)
+		rm.metrics.RecordAPICall("READ_MANY", "ListPolicyVersions", err)
+	}
+
+	// Sort the list of versions by the creation date and return the list of
+	// versions in creation date order
+	sort.Slice(versions, func(i, j int) bool {
+		return versions[i].createDate.Before(*versions[j].createDate)
+	})
+	return versions, err
+}
+
+// deletePolicyVersion removes the specified policy version from the supplied
+// policy
+func (rm *resourceManager) deletePolicyVersion(
+	ctx context.Context,
+	policyARN string,
+	version string,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.deletePolicyVersion")
+	defer func(err error) {
+		exit(err)
+	}(err)
+
+	input := &svcsdk.DeletePolicyVersionInput{}
+	input.SetPolicyArn(policyARN)
+	input.SetVersionId(version)
+
+	_, err = rm.sdkapi.DeletePolicyVersionWithContext(ctx, input)
+	rm.metrics.RecordAPICall("UPDATE", "DeletePolicyVersion", err)
+	return err
+}
+
+// deleteNonDefaultPolicyVersions removes all policy versions other than the
+// default version (which is deleted when the policy itself is deleted).
+func (rm *resourceManager) deleteNonDefaultPolicyVersions(
+	ctx context.Context,
+	r *resource,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.deleteNonDefaultPolicyVersions")
+	defer func(err error) {
+		exit(err)
+	}(err)
+
+	policyARN := string(*r.ko.Status.ACKResourceMetadata.ARN)
+
+	versions, err := rm.getPolicyVersions(ctx, policyARN)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range versions {
+		if v.isDefault {
+			continue
+		}
+		pver := v.version
+		if err = rm.deletePolicyVersion(ctx, policyARN, pver); err != nil {
+			return err
+		}
+		rlog.Info(
+			"deleted non-default policy version",
+			"policy_arn", policyARN,
+			"policy_version", pver,
+		)
+	}
+	return nil
 }

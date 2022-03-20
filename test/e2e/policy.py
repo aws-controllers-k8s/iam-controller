@@ -17,6 +17,7 @@ import datetime
 import time
 
 import boto3
+from botocore import config
 import pytest
 
 DEFAULT_WAIT_UNTIL_EXISTS_TIMEOUT_SECONDS = 60*10
@@ -24,6 +25,13 @@ DEFAULT_WAIT_UNTIL_EXISTS_INTERVAL_SECONDS = 15
 DEFAULT_WAIT_UNTIL_DELETED_TIMEOUT_SECONDS = 60*10
 DEFAULT_WAIT_UNTIL_DELETED_INTERVAL_SECONDS = 15
 
+_client_config = config.Config(
+    retries={
+        # I get lots of throttling errors...
+        'max_attempts': 30,
+        'mode': 'standard',
+    }
+)
 
 def wait_until_exists(
         policy_arn: str,
@@ -94,12 +102,13 @@ def get(policy_arn):
 
     If no such Policy exists, returns None.
     """
-    c = boto3.client('iam')
+    c = boto3.client('iam', config=_client_config)
     try:
         resp = c.get_policy(PolicyArn=policy_arn)
         return resp['Policy']
     except c.exceptions.NoSuchEntityException:
         return None
+
 
 def get_tags(policy_arn):
     """Returns a list containing the tags that have been associated to the
@@ -107,9 +116,22 @@ def get_tags(policy_arn):
 
     If no such Policy exists, returns None.
     """
-    c = boto3.client('iam')
+    c = boto3.client('iam', config=_client_config)
     try:
         resp = c.list_policy_tags(PolicyArn=policy_arn)
         return resp['Tags']
+    except c.exceptions.NoSuchEntityException:
+        return None
+
+
+def get_version(policy_arn, version_id):
+    """Returns a dict containing the PolicyVersion record from the IAM API.
+
+    If no such PolicyVersion exists, returns None.
+    """
+    c = boto3.client('iam', config=_client_config)
+    try:
+        resp = c.get_policy_version(PolicyArn=policy_arn, VersionId=version_id)
+        return resp['PolicyVersion']
     except c.exceptions.NoSuchEntityException:
         return None

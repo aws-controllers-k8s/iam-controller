@@ -155,10 +155,16 @@ func (rm *resourceManager) sdkFind(
 	}
 
 	rm.setStatusDefaults(ko)
-	if tags, err := rm.getTags(ctx, &resource{ko}); err != nil {
-		return nil, err
-	} else {
-		ko.Spec.Tags = tags
+	// The PolicyDocument is not returned by GetPolicy. You need to call
+	// GetPolicyVersion with the default version ID in order to retrieve it
+	if ko.Status.DefaultVersionID != nil && ko.Status.ACKResourceMetadata != nil && ko.Status.ACKResourceMetadata.ARN != nil {
+		policyARN := string(*ko.Status.ACKResourceMetadata.ARN)
+		version := *ko.Status.DefaultVersionID
+		if pv, err := rm.getPolicyVersion(ctx, policyARN, version); err != nil {
+			return nil, err
+		} else {
+			ko.Spec.PolicyDocument = &pv.document
+		}
 	}
 
 	return &resource{ko}, nil
@@ -289,13 +295,6 @@ func (rm *resourceManager) sdkCreate(
 	}
 
 	rm.setStatusDefaults(ko)
-	// A Policy doesn't have an update code path. Instead, users can create a
-	// new PolicyVersion and set that new version to be the default version of
-	// a Policy. Until we implement this custom update code path, we will just
-	// set the ResourceSynced condition to True here after a successful
-	// creation (of the first, and as of now, only supported) version.
-	ackcondition.SetSynced(&resource{ko}, corev1.ConditionTrue, nil, nil)
-
 	return &resource{ko}, nil
 }
 
@@ -356,6 +355,15 @@ func (rm *resourceManager) sdkDelete(
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.sdkDelete")
 	defer exit(err)
+	// This is to avoid the following error:
+	//
+	// DeleteConflict: This policy has more than one version. Before you delete a
+	// policy, you must delete the policy's versions. The default version is
+	// deleted with the policy.
+	if err = rm.deleteNonDefaultPolicyVersions(ctx, r); err != nil {
+		return r, err
+	}
+
 	input, err := rm.newDeleteRequestPayload(r)
 	if err != nil {
 		return nil, err
