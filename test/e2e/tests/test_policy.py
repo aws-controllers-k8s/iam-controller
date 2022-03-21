@@ -13,6 +13,7 @@
 
 """Integration tests for the IAM Policy resource"""
 
+import json
 import time
 
 import pytest
@@ -27,7 +28,9 @@ from e2e import policy
 
 DELETE_WAIT_AFTER_SECONDS = 10
 CHECK_WAIT_AFTER_SECONDS = 10
-MODIFY_WAIT_AFTER_SECONDS = 10
+# NOTE(jaypipes): I've seen Tagris take nearly 20 seconds to return updated tag
+# information on a resource.
+MODIFY_WAIT_AFTER_SECONDS = 20
 
 
 @service_marker
@@ -66,7 +69,7 @@ class TestPolicy:
 
         policy.wait_until_exists(policy_arn)
 
-         # Same update code path check for tags...
+        # check update code path for tags...
         latest_tags = policy.get_tags(policy_arn)
         before_update_expected_tags = [
             {
@@ -115,6 +118,62 @@ class TestPolicy:
             }
         ]
         assert latest_tags == after_update_expected_tags
+
+        # check update code path for policy document, which actually triggers
+        # a call to CreatePolicyVersion...
+        orig_policy_doc = {
+            "Version":"2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": "s3:ListAllMyBuckets",
+                    "Resource": "arn:aws:s3:::*",
+                },
+                {
+                    "Effect": "Allow",
+                    "Action": ["s3:List*"],
+                    "Resource": ["*"],
+                },
+            ],
+        }
+
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert "status" in cr
+        assert "defaultVersionID" in cr["status"]
+        assert cr["status"]["defaultVersionID"] == "v1"
+
+        before_pv = policy.get_version(policy_arn, "v1")
+        before_doc = before_pv["Document"]
+        assert before_doc == orig_policy_doc
+
+        new_policy_doc = {
+            "Version":"2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": "s3:ListAllMyBuckets",
+                    "Resource": "arn:aws:s3:::*",
+                },
+            ],
+        }
+        updates = {
+            "spec": {"policyDocument": json.dumps(new_policy_doc)},
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        condition.assert_synced(ref)
+
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert "status" in cr
+        assert "defaultVersionID" in cr["status"]
+        assert cr["status"]["defaultVersionID"] == "v2"
+
+        after_pv = policy.get_version(policy_arn, "v2")
+        after_doc = after_pv["Document"]
+        assert after_doc == new_policy_doc
 
         k8s.delete_custom_resource(ref)
 
