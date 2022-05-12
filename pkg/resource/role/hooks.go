@@ -15,6 +15,7 @@ package role
 
 import (
 	"context"
+	"net/url"
 
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
 	ackutil "github.com/aws-controllers-k8s/runtime/pkg/util"
@@ -274,4 +275,8 @@ func (rm *resourceManager) removeTags(
 	_, err = rm.sdkapi.UntagRoleWithContext(ctx, input)
 	rm.metrics.RecordAPICall("DELETE", "UntagRole", err)
 	return err
+}
+
+func decodeAssumeDocument(encoded string) (string, error) {
+	return url.QueryUnescape(encoded)
 }
