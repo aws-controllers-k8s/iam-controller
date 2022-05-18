@@ -158,6 +158,13 @@ func (rm *resourceManager) sdkFind(
 	}
 
 	rm.setStatusDefaults(ko)
+	if ko.Spec.AssumeRolePolicyDocument != nil {
+		if doc, err := decodeAssumeDocument(*ko.Spec.AssumeRolePolicyDocument); err != nil {
+			return nil, err
+		} else {
+			ko.Spec.AssumeRolePolicyDocument = &doc
+		}
+	}
 	if policies, err := rm.getPolicies(ctx, &resource{ko}); err != nil {
 		return nil, err
 	} else {
@@ -168,7 +175,6 @@ func (rm *resourceManager) sdkFind(
 	} else {
 		ko.Spec.Tags = tags
 	}
-
 	return &resource{ko}, nil
 }
 
@@ -299,6 +305,13 @@ func (rm *resourceManager) sdkCreate(
 	}
 
 	rm.setStatusDefaults(ko)
+	if ko.Spec.AssumeRolePolicyDocument != nil {
+		if doc, err := decodeAssumeDocument(*ko.Spec.AssumeRolePolicyDocument); err != nil {
+			return nil, err
+		} else {
+			ko.Spec.AssumeRolePolicyDocument = &doc
+		}
+	}
 	if err := rm.syncPolicies(ctx, &resource{ko}); err != nil {
 		return nil, err
 	}
