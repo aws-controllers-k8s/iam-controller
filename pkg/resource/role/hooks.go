@@ -166,17 +166,21 @@ func (rm *resourceManager) syncTags(
 		}
 	}
 
-	for _, t := range toAdd {
-		rlog.Debug("adding tag to role", "key", *t.Key, "value", *t.Value)
+	if len(toAdd) > 0 {
+		for _, t := range toAdd {
+			rlog.Debug("adding tag to role", "key", *t.Key, "value", *t.Value)
+		}
+		if err = rm.addTags(ctx, r, toAdd); err != nil {
+			return err
+		}
 	}
-	if err = rm.addTags(ctx, r, toAdd); err != nil {
-		return err
-	}
-	for _, t := range toDelete {
-		rlog.Debug("removing tag from role", "key", *t.Key, "value", *t.Value)
-	}
-	if err = rm.removeTags(ctx, r, toDelete); err != nil {
-		return err
+	if len(toDelete) > 0 {
+		for _, t := range toDelete {
+			rlog.Debug("removing tag from role", "key", *t.Key, "value", *t.Value)
+		}
+		if err = rm.removeTags(ctx, r, toDelete); err != nil {
+			return err
+		}
 	}
 
 	return nil
