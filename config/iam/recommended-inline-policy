@@ -16,6 +16,7 @@
                 "iam:CreatePolicyVersion",
                 "iam:DeletePolicyVersion",
                 "iam:ListPolicyVersions",
+                "iam:ListPolicyTags",
                 "iam:ListAttachedRolePolicies",
                 "iam:AttachRolePolicy",
                 "iam:DetachRolePolicy",
