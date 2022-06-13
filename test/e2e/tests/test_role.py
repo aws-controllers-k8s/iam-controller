@@ -25,6 +25,7 @@ from e2e import service_marker, CRD_GROUP, CRD_VERSION, load_resource
 from e2e.common.types import ROLE_RESOURCE_PLURAL
 from e2e.replacement_values import REPLACEMENT_VALUES
 from e2e import role
+from e2e import tag
 
 DELETE_WAIT_AFTER_SECONDS = 10
 CHECK_STATUS_WAIT_SECONDS = 10
@@ -111,7 +112,7 @@ class TestRole:
                 "Value": "val1"
             }
         ]
-        assert latest_tags == before_update_expected_tags
+        assert tag.cleaned(latest_tags) == before_update_expected_tags
         new_tags = [
             {
                 "key": "tag2",
@@ -131,7 +132,7 @@ class TestRole:
             }
         ]
         latest_tags = role.get_tags(role_name)
-        assert latest_tags == after_update_expected_tags
+        assert tag.cleaned(latest_tags) == after_update_expected_tags
 
         k8s.delete_custom_resource(ref)
 
