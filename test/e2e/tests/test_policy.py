@@ -25,6 +25,7 @@ from e2e import service_marker, CRD_GROUP, CRD_VERSION, load_resource
 from e2e.common.types import POLICY_RESOURCE_PLURAL
 from e2e.replacement_values import REPLACEMENT_VALUES
 from e2e import policy
+from e2e import tag
 
 DELETE_WAIT_AFTER_SECONDS = 10
 CHECK_WAIT_AFTER_SECONDS = 10
@@ -77,7 +78,7 @@ class TestPolicy:
                 "Value": "val1"
             }
         ]
-        assert latest_tags == before_update_expected_tags
+        assert tag.cleaned(latest_tags) == before_update_expected_tags
         new_tags = [
             {
                 "key": "tag2",
@@ -97,7 +98,7 @@ class TestPolicy:
                 "Value": "val2",
             }
         ]
-        assert latest_tags == after_update_expected_tags
+        assert tag.cleaned(latest_tags) == after_update_expected_tags
         new_tags = [
             {
                 "key": "tag2",
@@ -117,7 +118,7 @@ class TestPolicy:
                 "Value": "val3",
             }
         ]
-        assert latest_tags == after_update_expected_tags
+        assert tag.cleaned(latest_tags) == after_update_expected_tags
 
         # check update code path for policy document, which actually triggers
         # a call to CreatePolicyVersion...
