@@ -1,10 +1,9 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.7.0
+    controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
   name: roles.iam.services.k8s.aws
 spec:
@@ -47,13 +46,12 @@ spec:
                   YAML policy to JSON format before submitting it to IAM. \n The regex
                   pattern (http://wikipedia.org/wiki/regex) used to validate this
                   parameter is a string of characters consisting of the following:
-                  \n    * Any printable ASCII character ranging from the space character
-                  (\\u0020)    through the end of the ASCII character range \n    *
-                  The printable characters in the Basic Latin and Latin-1 Supplement
-                  character    set (through \\u00FF) \n    * The special characters
-                  tab (\\u0009), line feed (\\u000A), and carriage    return (\\u000D)
-                  \n Upon success, the response includes the same trust policy in
-                  JSON format."
+                  \n * Any printable ASCII character ranging from the space character
+                  (\\u0020) through the end of the ASCII character range \n * The
+                  printable characters in the Basic Latin and Latin-1 Supplement character
+                  set (through \\u00FF) \n * The special characters tab (\\u0009),
+                  line feed (\\u000A), and carriage return (\\u000D) \n Upon success,
+                  the response includes the same trust policy in JSON format."
                 type: string
               description:
                 description: A description of the role.
@@ -61,7 +59,7 @@ spec:
               maxSessionDuration:
                 description: "The maximum session duration (in seconds) that you want
                   to set for the specified role. If you do not specify a value for
-                  this setting, the default maximum of one hour is applied. This setting
+                  this setting, the default value of one hour is applied. This setting
                   can have a value from 1 hour to 12 hours. \n Anyone who assumes
                   the role from the or API can use the DurationSeconds API parameter
                   or the duration-seconds CLI parameter to request a longer session.
@@ -220,9 +218,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

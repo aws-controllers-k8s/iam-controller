@@ -1,10 +1,9 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.7.0
+    controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
   name: policies.iam.services.k8s.aws
 spec:
@@ -81,12 +80,11 @@ spec:
                   JSON policy language (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html)
                   in the IAM User Guide. \n The regex pattern (http://wikipedia.org/wiki/regex)
                   used to validate this parameter is a string of characters consisting
-                  of the following: \n    * Any printable ASCII character ranging
-                  from the space character (\\u0020)    through the end of the ASCII
-                  character range \n    * The printable characters in the Basic Latin
-                  and Latin-1 Supplement character    set (through \\u00FF) \n    *
-                  The special characters tab (\\u0009), line feed (\\u000A), and carriage
-                  \   return (\\u000D)"
+                  of the following: \n * Any printable ASCII character ranging from
+                  the space character (\\u0020) through the end of the ASCII character
+                  range \n * The printable characters in the Basic Latin and Latin-1
+                  Supplement character set (through \\u00FF) \n * The special characters
+                  tab (\\u0009), line feed (\\u000A), and carriage return (\\u000D)"
                 type: string
               tags:
                 description: "A list of tags that you want to attach to the new IAM
@@ -221,9 +219,3 @@ spec:
     storage: true
     subresources:
       status: {}
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
