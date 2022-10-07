@@ -34,6 +34,7 @@ import (
 	svctypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
 	svcresource "github.com/aws-controllers-k8s/iam-controller/pkg/resource"
 
+	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/group"
 	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/policy"
 	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/role"
 

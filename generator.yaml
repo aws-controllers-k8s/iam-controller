@@ -2,7 +2,7 @@ ignore:
   resource_names:
    - AccessKey
    - AccountAlias
-   - Group
+   #- Group
    - InstanceProfile
    - LoginProfile
    - OpenIDConnectProvider
@@ -14,7 +14,51 @@ ignore:
    - ServiceSpecificCredential
    - User
    - VirtualMFADevice
+operations:
+  GetGroup:
+    # This is necessary because the GetGroupOutput shape has both a Group and a
+    # Users field and we want to grab the Group information from the output
+    # shape...
+    output_wrapper_field_path: Group
 resources:
+  Group:
+    hooks:
+      sdk_read_one_post_set_output:
+        template_path: hooks/group/sdk_read_one_post_set_output.go.tpl
+      sdk_create_post_set_output:
+        template_path: hooks/group/sdk_create_post_set_output.go.tpl
+      sdk_update_post_set_output:
+        template_path: hooks/group/sdk_update_post_set_output.go.tpl
+      sdk_delete_pre_build_request:
+        template_path: hooks/group/sdk_delete_pre_build_request.go.tpl
+    exceptions:
+      terminal_codes:
+        - InvalidInput
+        - MalformedPolicyDocument
+    renames:
+      operations:
+        CreateGroup:
+          input_fields:
+            GroupName: Name
+        GetGroup:
+          input_fields:
+            GroupName: Name
+        UpdateGroup:
+          input_fields:
+            GroupName: Name
+        DeleteGroup:
+          input_fields:
+            GroupName: Name
+    fields:
+      Path:
+        late_initialize: {}
+      # In order to support attaching zero or more policies to a role, we use
+      # custom update code path code that uses the Attach/DetachGroupPolicy API
+      # calls to manage the set of PolicyARNs attached to this Group.
+      Policies:
+        type: "[]*string"
+    tags:
+      ignore: true
   Policy:
     renames:
       operations:
