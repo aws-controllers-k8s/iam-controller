@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
+	commonutil "github.com/aws-controllers-k8s/iam-controller/pkg/util"
 )
 
 const (
@@ -119,6 +120,22 @@ func (rm *resourceManager) syncTags(
 	}
 
 	return nil
+}
+
+// compareTags is a custom comparison function for comparing lists of Tag
+// structs where the order of the structs in the list is not important.
+func compareTags(
+	delta *ackcompare.Delta,
+	a *resource,
+	b *resource,
+) {
+	if len(a.ko.Spec.Tags) != len(b.ko.Spec.Tags) {
+		delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
+	} else if len(a.ko.Spec.Tags) > 0 {
+		if !commonutil.EqualTags(a.ko.Spec.Tags, b.ko.Spec.Tags) {
+			delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
+		}
+	}
 }
 
 // inTags returns true if the supplied key and value can be found in the

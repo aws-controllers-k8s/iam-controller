@@ -17,11 +17,13 @@ import (
 	"context"
 	"net/url"
 
+	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
 	ackutil "github.com/aws-controllers-k8s/runtime/pkg/util"
 	svcsdk "github.com/aws/aws-sdk-go/service/iam"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
+	commonutil "github.com/aws-controllers-k8s/iam-controller/pkg/util"
 )
 
 // syncPolicies examines the PolicyARNs in the supplied Role and calls the
@@ -134,6 +136,22 @@ func (rm *resourceManager) removePolicy(
 	_, err = rm.sdkapi.DetachRolePolicyWithContext(ctx, input)
 	rm.metrics.RecordAPICall("DELETE", "DetachRolePolicy", err)
 	return err
+}
+
+// compareTags is a custom comparison function for comparing lists of Tag
+// structs where the order of the structs in the list is not important.
+func compareTags(
+	delta *ackcompare.Delta,
+	a *resource,
+	b *resource,
+) {
+	if len(a.ko.Spec.Tags) != len(b.ko.Spec.Tags) {
+		delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
+	} else if len(a.ko.Spec.Tags) > 0 {
+		if !commonutil.EqualTags(a.ko.Spec.Tags, b.ko.Spec.Tags) {
+			delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
+		}
+	}
 }
 
 // syncTags examines the Tags in the supplied Role and calls the ListRoleTags,

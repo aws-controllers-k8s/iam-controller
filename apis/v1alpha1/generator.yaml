@@ -28,6 +28,8 @@ resources:
           input_fields:
             PolicyName: Name
     hooks:
+      delta_pre_compare:
+        code: compareTags(delta, a, b)
       sdk_read_one_post_set_output:
         template_path: hooks/policy/sdk_read_one_post_set_output.go.tpl
       sdk_delete_pre_build_request:
@@ -65,8 +67,13 @@ resources:
         late_initialize: {}
       Path:
         late_initialize: {}
+      Tags:
+        compare:
+          is_ignored: true
   Role:
     hooks:
+      delta_pre_compare:
+        code: compareTags(delta, a, b)
       sdk_read_one_post_set_output:
         template_path: hooks/role/sdk_read_one_post_set_output.go.tpl
       sdk_create_post_set_output:
@@ -107,3 +114,6 @@ resources:
       # calls to manage the set of PolicyARNs attached to this Role.
       Policies:
         type: "[]*string"
+      Tags:
+        compare:
+          is_ignored: true
