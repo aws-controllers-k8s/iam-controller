@@ -51,6 +51,7 @@ type AccessDetail struct {
 // key, you must create a new access key.
 type AccessKey struct {
 	CreateDate *metav1.Time `json:"createDate,omitempty"`
+	UserName   *string      `json:"userName,omitempty"`
 }
 
 // Contains information about the last time an Amazon Web Services access key
@@ -70,6 +71,7 @@ type AccessKeyLastUsed struct {
 // This data type is used as a response element in the ListAccessKeys operation.
 type AccessKeyMetadata struct {
 	CreateDate *metav1.Time `json:"createDate,omitempty"`
+	UserName   *string      `json:"userName,omitempty"`
 }
 
 // Contains information about an attached permissions boundary.
@@ -131,6 +133,7 @@ type EntityInfo struct {
 	// in the Amazon Web Services General Reference.
 	ARN  *string `json:"arn,omitempty"`
 	ID   *string `json:"id,omitempty"`
+	Name *string `json:"name,omitempty"`
 	Path *string `json:"path,omitempty"`
 }
 
@@ -142,27 +145,6 @@ type EntityInfo struct {
 type ErrorDetails struct {
 	Code    *string `json:"code,omitempty"`
 	Message *string `json:"message,omitempty"`
-}
-
-// Contains information about an IAM group entity.
-//
-// This data type is used as a response element in the following operations:
-//
-//    * CreateGroup
-//
-//    * GetGroup
-//
-//    * ListGroups
-type Group struct {
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for Amazon Web
-	// Services resources.
-	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
-	// in the Amazon Web Services General Reference.
-	ARN        *string      `json:"arn,omitempty"`
-	CreateDate *metav1.Time `json:"createDate,omitempty"`
-	GroupID    *string      `json:"groupID,omitempty"`
-	Path       *string      `json:"path,omitempty"`
 }
 
 // Contains information about an IAM group, including all of the group's policies.
@@ -178,6 +160,29 @@ type GroupDetail struct {
 	ARN        *string      `json:"arn,omitempty"`
 	CreateDate *metav1.Time `json:"createDate,omitempty"`
 	GroupID    *string      `json:"groupID,omitempty"`
+	GroupName  *string      `json:"groupName,omitempty"`
+	Path       *string      `json:"path,omitempty"`
+}
+
+// Contains information about an IAM group entity.
+//
+// This data type is used as a response element in the following operations:
+//
+//    * CreateGroup
+//
+//    * GetGroup
+//
+//    * ListGroups
+type Group_SDK struct {
+	// The Amazon Resource Name (ARN). ARNs are unique identifiers for Amazon Web
+	// Services resources.
+	//
+	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// in the Amazon Web Services General Reference.
+	ARN        *string      `json:"arn,omitempty"`
+	CreateDate *metav1.Time `json:"createDate,omitempty"`
+	GroupID    *string      `json:"groupID,omitempty"`
+	GroupName  *string      `json:"groupName,omitempty"`
 	Path       *string      `json:"path,omitempty"`
 }
 
@@ -216,6 +221,7 @@ type InstanceProfile struct {
 type LoginProfile struct {
 	CreateDate            *metav1.Time `json:"createDate,omitempty"`
 	PasswordResetRequired *bool        `json:"passwordResetRequired,omitempty"`
+	UserName              *string      `json:"userName,omitempty"`
 }
 
 // Contains information about an MFA device.
@@ -223,6 +229,7 @@ type LoginProfile struct {
 // This data type is used as a response element in the ListMFADevices operation.
 type MFADevice struct {
 	EnableDate *metav1.Time `json:"enableDate,omitempty"`
+	UserName   *string      `json:"userName,omitempty"`
 }
 
 // Contains information about a managed policy, including the policy's ARN,
@@ -322,7 +329,8 @@ type PolicyGrantingServiceAccess struct {
 // inline policies (https://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 type PolicyGroup struct {
-	GroupID *string `json:"groupID,omitempty"`
+	GroupID   *string `json:"groupID,omitempty"`
+	GroupName *string `json:"groupName,omitempty"`
 }
 
 // Contains information about a role that a managed policy is attached to.
@@ -347,7 +355,8 @@ type PolicyRole struct {
 // inline policies (https://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 type PolicyUser struct {
-	UserID *string `json:"userID,omitempty"`
+	UserID   *string `json:"userID,omitempty"`
+	UserName *string `json:"userName,omitempty"`
 }
 
 // Contains information about a version of a managed policy.
@@ -505,6 +514,7 @@ type SAMLProviderListEntry struct {
 // operations.
 type SSHPublicKey struct {
 	UploadDate *metav1.Time `json:"uploadDate,omitempty"`
+	UserName   *string      `json:"userName,omitempty"`
 }
 
 // Contains information about an SSH public key, without the key's body or fingerprint.
@@ -512,6 +522,7 @@ type SSHPublicKey struct {
 // This data type is used as a response element in the ListSSHPublicKeys operation.
 type SSHPublicKeyMetadata struct {
 	UploadDate *metav1.Time `json:"uploadDate,omitempty"`
+	UserName   *string      `json:"userName,omitempty"`
 }
 
 // Contains information about a server certificate.
@@ -558,11 +569,13 @@ type ServiceLastAccessed struct {
 // Contains the details of a service-specific credential.
 type ServiceSpecificCredential struct {
 	CreateDate *metav1.Time `json:"createDate,omitempty"`
+	UserName   *string      `json:"userName,omitempty"`
 }
 
 // Contains additional details about a service-specific credential.
 type ServiceSpecificCredentialMetadata struct {
 	CreateDate *metav1.Time `json:"createDate,omitempty"`
+	UserName   *string      `json:"userName,omitempty"`
 }
 
 // Contains information about an X.509 signing certificate.
@@ -571,6 +584,7 @@ type ServiceSpecificCredentialMetadata struct {
 // and ListSigningCertificates operations.
 type SigningCertificate struct {
 	UploadDate *metav1.Time `json:"uploadDate,omitempty"`
+	UserName   *string      `json:"userName,omitempty"`
 }
 
 // A structure that represents user-provided metadata that can be associated
@@ -629,6 +643,7 @@ type User struct {
 	PermissionsBoundary *AttachedPermissionsBoundary `json:"permissionsBoundary,omitempty"`
 	Tags                []*Tag                       `json:"tags,omitempty"`
 	UserID              *string                      `json:"userID,omitempty"`
+	UserName            *string                      `json:"userName,omitempty"`
 }
 
 // Contains information about an IAM user, including all the user's policies
@@ -656,10 +671,21 @@ type UserDetail struct {
 	PermissionsBoundary *AttachedPermissionsBoundary `json:"permissionsBoundary,omitempty"`
 	Tags                []*Tag                       `json:"tags,omitempty"`
 	UserID              *string                      `json:"userID,omitempty"`
+	UserName            *string                      `json:"userName,omitempty"`
 }
 
 // Contains information about a virtual MFA device.
 type VirtualMFADevice struct {
 	EnableDate *metav1.Time `json:"enableDate,omitempty"`
 	Tags       []*Tag       `json:"tags,omitempty"`
+	// Contains information about an IAM user entity.
+	//
+	// This data type is used as a response element in the following operations:
+	//
+	//    * CreateUser
+	//
+	//    * GetUser
+	//
+	//    * ListUsers
+	User *User `json:"user,omitempty"`
 }
