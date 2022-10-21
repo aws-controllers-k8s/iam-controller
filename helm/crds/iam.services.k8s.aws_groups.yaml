@@ -35,8 +35,8 @@ spec:
           spec:
             description: "GroupSpec defines the desired state of Group. \n Contains
               information about an IAM group entity. \n This data type is used as
-              a response element in the following operations: \n * CreateGroup \n
-              * GetGroup \n * ListGroups"
+              a response element in the following operations: \n - CreateGroup \n
+              - GetGroup \n - ListGroups"
             properties:
               name:
                 description: "The name of the group to create. Do not include the

@@ -11,6 +11,8 @@ rules:
   resources:
   - groups
 
+  - openidconnectproviders
+
   - policies
 
   - roles
@@ -27,6 +29,7 @@ rules:
   - iam.services.k8s.aws
   resources:
   - groups
+  - openidconnectproviders
   - policies
   - roles
   verbs:

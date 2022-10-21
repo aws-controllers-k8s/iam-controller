@@ -26,11 +26,11 @@ import (
 //
 // This data type is used as a response element in the following operations:
 //
-//    * CreateGroup
+//   - CreateGroup
 //
-//    * GetGroup
+//   - GetGroup
 //
-//    * ListGroups
+//   - ListGroups
 type GroupSpec struct {
 	// The name of the group to create. Do not include the path in this value.
 	//

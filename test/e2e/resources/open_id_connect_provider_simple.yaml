@@ -1,0 +1,14 @@
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: OpenIDConnectProvider
+metadata:
+  name: $OPEN_ID_CONNECT_PROVIDER_NAME
+spec:
+  url: $URL
+  clientIDList:
+    - $CLIENT_ID
+  thumbprintList:
+    - $THUMBPRINT
+  tags:
+    - key: $TAG_KEY
+      value: $TAG_VALUE
+      

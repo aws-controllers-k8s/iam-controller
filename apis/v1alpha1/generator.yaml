@@ -5,7 +5,7 @@ ignore:
    #- Group
    - InstanceProfile
    - LoginProfile
-   - OpenIDConnectProvider
+   #- OpenIDConnectProvider
    #- Policy
    - PolicyVersion
    #- Role
@@ -158,6 +158,20 @@ resources:
       # calls to manage the set of PolicyARNs attached to this Role.
       Policies:
         type: "[]*string"
+      Tags:
+        compare:
+          is_ignored: true
+  OpenIDConnectProvider:
+    hooks:
+      delta_pre_compare:
+        code: compareTags(delta, a, b)
+    exceptions:
+      terminal_codes:
+        - InvalidInput 
+        - EntityAlreadyExists
+    fields:
+      URL:
+        is_immutable: true
       Tags:
         compare:
           is_ignored: true
