@@ -18,6 +18,7 @@ package open_id_connect_provider
 import (
 	"bytes"
 	"reflect"
+	"strings"
 
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 )
@@ -51,8 +52,16 @@ func newResourceDelta(
 	if ackcompare.HasNilDifference(a.ko.Spec.URL, b.ko.Spec.URL) {
 		delta.Add("Spec.URL", a.ko.Spec.URL, b.ko.Spec.URL)
 	} else if a.ko.Spec.URL != nil && b.ko.Spec.URL != nil {
-		if *a.ko.Spec.URL != *b.ko.Spec.URL {
-			delta.Add("Spec.URL", a.ko.Spec.URL, b.ko.Spec.URL)
+		// the URL field must begin with "https://"
+		// c.f. https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateOpenIDConnectProvider.html
+		// however, when stored in the IAM backend, the "https://" prefix is stripped out
+		// thus here we treat "https://" as a null token for the purposes of string comparison
+		if (*a.ko.Spec.URL != *b.ko.Spec.URL) {
+			a_url := strings.TrimPrefix(*a.ko.Spec.URL, "https://")
+			b_url := strings.TrimPrefix(*b.ko.Spec.URL, "https://")
+			if a_url != b_url {
+				delta.Add("Spec.URL", a.ko.Spec.URL, b.ko.Spec.URL)
+		   }
 		}
 	}
 
