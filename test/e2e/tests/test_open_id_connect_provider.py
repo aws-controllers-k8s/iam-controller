@@ -48,7 +48,7 @@ def oidc_provider():
 
     # the URL must begin with "https://"
     # c.f. https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateOpenIDConnectProvider.html
-    replacements["URL"] = "https://host.domain.net"
+    replacements["URL"] = "https://example.com"
     replacements["CLIENT_ID"] = "phippy"
     # thumbprints must be exactly 40 characters
     replacements["THUMBPRINT"] = "0123456789012345678901234567890123456789"
@@ -60,7 +60,6 @@ def oidc_provider():
         additional_replacements=replacements,
     )
 
-    logging.debug(f"**** Pytest fixture creating: {resource_data}")
     ref = k8s.CustomResourceReference(
         CRD_GROUP,
         CRD_VERSION,
@@ -71,7 +70,6 @@ def oidc_provider():
     k8s.create_custom_resource(ref, resource_data)
     cr = k8s.wait_resource_consumed_by_controller(ref)
 
-    logging.debug(f"**** Pytest fixture created: {cr['spec']}")
     yield (ref, cr)
 
     # Delete the OIDC provider when tests complete
@@ -81,11 +79,13 @@ def oidc_provider():
     except:
         pass
 
+
 def assert_url_equals_ignore_prefix(url, match):
     if url.startswith("https://"):
         assert url == match
     else:
         assert f"https://{url}" == match
+
 
 @service_marker
 @pytest.mark.canary
@@ -94,12 +94,10 @@ class TestOpenIdConnectProvider:
         (ref, cr) = oidc_provider
 
         # get the ARN
-        logging.debug(f"\n\n**** OIDCProvider create")
         cr = k8s.get_resource(ref)
         assert cr is not None
         assert "status" in cr
         assert "ackResourceMetadata" in cr["status"]
-        logging.debug(f"ackResourceMetadata: {cr['status']['ackResourceMetadata']}")
         assert "arn" in cr["status"]["ackResourceMetadata"]
         oidc_provider_arn = cr["status"]["ackResourceMetadata"]["arn"]
 
@@ -112,18 +110,14 @@ class TestOpenIdConnectProvider:
 
         condition.assert_synced(ref)
 
-        logging.debug(f"\n\n**** OIDCProvider create validation")
         latest_oidcp_boto3 = open_id_connect_provider.get(oidc_provider_arn)
-        logging.debug(f"\n**** OIDCProvider created: {latest_oidcp_boto3}")
 
         assert latest_oidcp_boto3 is not None
         assert len(latest_oidcp_boto3["ThumbprintList"]) == 1
         latest_oidcp_url = latest_oidcp_boto3["Url"]
-        assert_url_equals_ignore_prefix(latest_oidcp_url, "https://host.domain.net")
+        assert_url_equals_ignore_prefix(latest_oidcp_url, "https://example.com")
 
         # perform an update to some part of the OIDCProvider
-        logging.debug(f"\n\n**** OIDCProvider update")
-
         new_thumbprints = [
             "9876543210987654321098765432109876543210"
         ]  # thumbprints must be 40 characters
@@ -136,41 +130,24 @@ class TestOpenIdConnectProvider:
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
-        logging.debug(f"\n\n**** OIDCProvider update validation")
         latest_oidcp_boto3 = open_id_connect_provider.get(oidc_provider_arn)
         assert latest_oidcp_boto3 is not None
-        logging.debug(f"\n\n**** OIDCProvider updated: {latest_oidcp_boto3}")
         assert len(latest_oidcp_boto3["ThumbprintList"]) == 1
         assert latest_oidcp_boto3["ThumbprintList"][0] == new_thumbprints[0]
 
         after_update_expected_tags = [{"Key": "key2", "Value": "val2"}]
-        logging.debug(f"\n\n**** OIDCProvider validate tags update")
         latest_tags = open_id_connect_provider.get_tags(oidc_provider_arn)
         assert tag.cleaned(latest_tags) == after_update_expected_tags
 
         # validate that changing the URL results in a terminal condition
-        update_url = {
-            "spec": {
-                "url" : "https://some.other.domain.com"
-            }
-        }
+        update_url = {"spec": {"url": "https://some.other.domain.com"}}
         logging.debug(f"\n\n**** OIDCProvider update of URL intended to fail")
         k8s.patch_custom_resource(ref, update_url)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
-        cr = k8s.get_resource(ref)
-        logging.debug(f"\n\n**** OIDCProvider CR updated: {cr}")
-        assert cr is not None
-        assert "status" in cr
-        cr_conditions = cr["status"]["conditions"]
-        cond_synced_found = False
-        cond_terminal_found = False
-        for cond in cr_conditions:
-            if cond["type"] == "ACK.ResourceSynced":
-                assert cond["status"] == False or cond["status"] == "False"
-                cond_synced_found = True
-            if cond["type"] == "ACK.Terminal":
-                assert cond["status"] == True or cond["status"] == "True"
-                assert cond["message"] == "Immutable Spec fields have been modified: URL"
-                cond_terminal_found = True
-        assert cond_synced_found and cond_terminal_found
+        condition.assert_not_synced(ref)
+        condition.assert_type_status(
+            ref,
+            cond_type_match=condition.CONDITION_TYPE_TERMINAL,
+            cond_status_match=True,
+        )

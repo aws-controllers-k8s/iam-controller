@@ -16,7 +16,6 @@ package open_id_connect_provider
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"strings"
 
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
@@ -37,7 +36,7 @@ func (rm *resourceManager) customUpdateOpenIDConnectProvider(
 	delta *ackcompare.Delta,
 ) (updated *resource, err error) {
 	rlog := ackrtlog.FromContext(ctx)
-	exit := rlog.Trace("rm.sdkUpdate")
+	exit := rlog.Trace("rm.customUpdateOpenIDConnectProvider")
 	defer func() {
 		exit(err)
 	}()
@@ -57,7 +56,7 @@ func (rm *resourceManager) customUpdateOpenIDConnectProvider(
 		var thumbprintResp *svcsdk.UpdateOpenIDConnectProviderThumbprintOutput
 		_ = thumbprintResp
 		thumbprintResp, err = rm.sdkapi.UpdateOpenIDConnectProviderThumbprintWithContext(ctx, thumbprintInput)
-		rm.metrics.RecordAPICall("UPDATE", "UpdateOpenIDCOnnectProviderThumbprint", err)
+		rm.metrics.RecordAPICall("UPDATE", "UpdateOpenIDConnectProviderThumbprint", err)
 		if err != nil {
 			return nil, err
 		}
@@ -294,8 +293,4 @@ func (rm *resourceManager) removeTags(
 	_, err = rm.sdkapi.UntagOpenIDConnectProviderWithContext(ctx, input)
 	rm.metrics.RecordAPICall("DELETE", "UntagOpenIDConnectProvider", err)
 	return err
-}
-
-func decodeAssumeDocument(encoded string) (string, error) {
-	return url.QueryUnescape(encoded)
 }
