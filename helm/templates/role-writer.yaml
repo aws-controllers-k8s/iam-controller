@@ -17,6 +17,8 @@ rules:
 
   - roles
 
+  - users
+
   verbs:
   - create
   - delete
@@ -32,6 +34,7 @@ rules:
   - openidconnectproviders
   - policies
   - roles
+  - users
   verbs:
   - get
   - patch

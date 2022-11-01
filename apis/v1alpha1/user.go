@@ -20,26 +20,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// GroupSpec defines the desired state of Group.
+// UserSpec defines the desired state of User.
 //
-// Contains information about an IAM group entity.
+// Contains information about an IAM user entity.
 //
 // This data type is used as a response element in the following operations:
 //
-//    * CreateGroup
+//    * CreateUser
 //
-//    * GetGroup
+//    * GetUser
 //
-//    * ListGroups
-type GroupSpec struct {
-	// The name of the group to create. Do not include the path in this value.
+//    * ListUsers
+type UserSpec struct {
+	// The name of the user to create.
 	//
 	// IAM user, group, role, and policy names must be unique within the account.
 	// Names are not distinguished by case. For example, you cannot create resources
 	// named both "MyResource" and "myresource".
 	// +kubebuilder:validation:Required
 	Name *string `json:"name"`
-	// The path to the group. For more information about paths, see IAM identifiers
+	// The path for the user name. For more information about paths, see IAM identifiers
 	// (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the IAM User Guide.
 	//
@@ -53,12 +53,23 @@ type GroupSpec struct {
 	// (\u007F), including most punctuation characters, digits, and upper and lowercased
 	// letters.
 	Path *string `json:"path,omitempty"`
+	// The ARN of the policy that is used to set the permissions boundary for the
+	// user.
+	PermissionsBoundary *string `json:"permissionsBoundary,omitempty"`
 
 	Policies []*string `json:"policies,omitempty"`
+	// A list of tags that you want to attach to the new user. Each tag consists
+	// of a key name and an associated value. For more information about tagging,
+	// see Tagging IAM resources (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_tags.html)
+	// in the IAM User Guide.
+	//
+	// If any one of the tags is invalid or if you exceed the allowed maximum number
+	// of tags, then the entire request fails and the resource is not created.
+	Tags []*Tag `json:"tags,omitempty"`
 }
 
-// GroupStatus defines the observed state of Group
-type GroupStatus struct {
+// UserStatus defines the observed state of User
+type UserStatus struct {
 	// All CRs managed by ACK have a common `Status.ACKResourceMetadata` member
 	// that is used to contain resource sync state, account ownership,
 	// constructed ARN for the resource
@@ -71,34 +82,55 @@ type GroupStatus struct {
 	// +kubebuilder:validation:Optional
 	Conditions []*ackv1alpha1.Condition `json:"conditions"`
 	// The date and time, in ISO 8601 date-time format (http://www.iso.org/iso/iso8601),
-	// when the group was created.
+	// when the user was created.
 	// +kubebuilder:validation:Optional
 	CreateDate *metav1.Time `json:"createDate,omitempty"`
-	// The stable and unique string identifying the group. For more information
-	// about IDs, see IAM identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
+	// The date and time, in ISO 8601 date-time format (http://www.iso.org/iso/iso8601),
+	// when the user's password was last used to sign in to an Amazon Web Services
+	// website. For a list of Amazon Web Services websites that capture a user's
+	// last sign-in time, see the Credential reports (https://docs.aws.amazon.com/IAM/latest/UserGuide/credential-reports.html)
+	// topic in the IAM User Guide. If a password is used more than once in a five-minute
+	// span, only the first use is returned in this field. If the field is null
+	// (no value), then it indicates that they never signed in with a password.
+	// This can be because:
+	//
+	//    * The user never had a password.
+	//
+	//    * A password exists but has not been used since IAM started tracking this
+	//    information on October 20, 2014.
+	//
+	// A null value does not mean that the user never had a password. Also, if the
+	// user does not currently have a password but had one in the past, then this
+	// field contains the date and time the most recent password was used.
+	//
+	// This value is returned only in the GetUser and ListUsers operations.
+	// +kubebuilder:validation:Optional
+	PasswordLastUsed *metav1.Time `json:"passwordLastUsed,omitempty"`
+	// The stable and unique string identifying the user. For more information about
+	// IDs, see IAM identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the IAM User Guide.
 	// +kubebuilder:validation:Optional
-	GroupID *string `json:"groupID,omitempty"`
+	UserID *string `json:"userID,omitempty"`
 }
 
-// Group is the Schema for the Groups API
+// User is the Schema for the Users API
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-type Group struct {
+type User struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              GroupSpec   `json:"spec,omitempty"`
-	Status            GroupStatus `json:"status,omitempty"`
+	Spec              UserSpec   `json:"spec,omitempty"`
+	Status            UserStatus `json:"status,omitempty"`
 }
 
-// GroupList contains a list of Group
+// UserList contains a list of User
 // +kubebuilder:object:root=true
-type GroupList struct {
+type UserList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Group `json:"items"`
+	Items           []User `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Group{}, &GroupList{})
+	SchemeBuilder.Register(&User{}, &UserList{})
 }

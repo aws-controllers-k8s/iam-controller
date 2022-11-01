@@ -12,7 +12,7 @@ ignore:
    - SAMLProvider
    - ServiceLinkedRole
    - ServiceSpecificCredential
-   - User
+   #- User
    - VirtualMFADevice
 operations:
   GetGroup:
@@ -191,3 +191,47 @@ resources:
           is_ignored: true
     update_operation:
       custom_method_name: customUpdateOpenIDConnectProvider
+  User:
+    hooks:
+      delta_pre_compare:
+        code: compareTags(delta, a, b)
+      sdk_read_one_post_set_output:
+        template_path: hooks/user/sdk_read_one_post_set_output.go.tpl
+      sdk_create_post_set_output:
+        template_path: hooks/user/sdk_create_post_set_output.go.tpl
+      sdk_update_post_set_output:
+        template_path: hooks/user/sdk_update_post_set_output.go.tpl
+      sdk_delete_pre_build_request:
+        template_path: hooks/user/sdk_delete_pre_build_request.go.tpl
+    exceptions:
+      terminal_codes:
+        - InvalidInput
+    renames:
+      operations:
+        CreateUser:
+          input_fields:
+            UserName: Name
+        GetUser:
+          input_fields:
+            UserName: Name
+        UpdateUser:
+          input_fields:
+            UserName: Name
+        DeleteUser:
+          input_fields:
+            UserName: Name
+    fields:
+      Path:
+        late_initialize: {}
+      PermissionsBoundary:
+        set:
+          # The input and output shapes are different...
+          - from: PermissionsBoundary.PermissionsBoundaryArn
+      # In order to support attaching zero or more policies to a user, we use
+      # custom update code path code that uses the Attach/DetachUserPolicy API
+      # calls to manage the set of PolicyARNs attached to this User.
+      Policies:
+        type: "[]*string"
+      Tags:
+        compare:
+          is_ignored: true
