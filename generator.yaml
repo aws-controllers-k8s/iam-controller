@@ -164,7 +164,7 @@ resources:
   OpenIDConnectProvider:
     hooks:
       delta_pre_compare:
-        code: compareTags(delta, a, b)
+        code: customPreCompare(delta, a, b)
     exceptions:
       terminal_codes:
         - InvalidInput 
@@ -175,3 +175,5 @@ resources:
       Tags:
         compare:
           is_ignored: true
+    update_operation:
+      custom_method_name: customUpdateOpenIDConnectProvider
