@@ -172,8 +172,10 @@ resources:
         - InvalidInput 
         - EntityAlreadyExists
     fields:
-      URL:
+      Url:
         is_immutable: true
+        compare:
+          is_ignored: true
       Tags:
         compare:
           is_ignored: true

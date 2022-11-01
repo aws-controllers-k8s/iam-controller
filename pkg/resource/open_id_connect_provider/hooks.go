@@ -278,7 +278,7 @@ func (rm *resourceManager) addTags(
 	input.Tags = inTags
 
 	_, err = rm.sdkapi.TagOpenIDConnectProviderWithContext(ctx, input)
-rm.metrics.RecordAPICall("UPDATE", "TagOpenIDConnectProvider", err)
+	rm.metrics.RecordAPICall("UPDATE", "TagOpenIDConnectProvider", err)
 	return err
 }
 
@@ -301,6 +301,6 @@ func (rm *resourceManager) removeTags(
 	input.TagKeys = inTagKeys
 
 	_, err = rm.sdkapi.UntagOpenIDConnectProviderWithContext(ctx, input)
-rm.metrics.RecordAPICall("UPDATE", "UntagOpenIDConnectProvider", err)
+	rm.metrics.RecordAPICall("UPDATE", "UntagOpenIDConnectProvider", err)
 	return err
 }
