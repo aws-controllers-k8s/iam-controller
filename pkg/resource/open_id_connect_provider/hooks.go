@@ -107,7 +107,7 @@ func (rm *resourceManager) customUpdateOpenIDConnectProvider(
 			var removeClientIDResp *svcsdk.RemoveClientIDFromOpenIDConnectProviderOutput
 			_ = removeClientIDResp
 			removeClientIDResp, err = rm.sdkapi.RemoveClientIDFromOpenIDConnectProviderWithContext(ctx, removeClientIDInput)
-			rm.metrics.RecordAPICall("UPDATE", "removeClientIDFromOpenIDConnectProvider", err)
+			rm.metrics.RecordAPICall("UPDATE", "RemoveClientIDFromOpenIDConnectProvider", err)
 			if err != nil {
 				return nil, err
 			}
@@ -278,7 +278,7 @@ func (rm *resourceManager) addTags(
 	input.Tags = inTags
 
 	_, err = rm.sdkapi.TagOpenIDConnectProviderWithContext(ctx, input)
-	rm.metrics.RecordAPICall("CREATE", "TagOpenIDConnectProvider", err)
+rm.metrics.RecordAPICall("UPDATE", "TagOpenIDConnectProvider", err)
 	return err
 }
 
@@ -301,6 +301,6 @@ func (rm *resourceManager) removeTags(
 	input.TagKeys = inTagKeys
 
 	_, err = rm.sdkapi.UntagOpenIDConnectProviderWithContext(ctx, input)
-	rm.metrics.RecordAPICall("DELETE", "UntagOpenIDConnectProvider", err)
+rm.metrics.RecordAPICall("UPDATE", "UntagOpenIDConnectProvider", err)
 	return err
 }
