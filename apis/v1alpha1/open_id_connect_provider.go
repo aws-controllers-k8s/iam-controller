@@ -33,7 +33,7 @@ type OpenIDConnectProviderSpec struct {
 	//
 	// There is no defined format for a client ID. The CreateOpenIDConnectProviderRequest
 	// operation accepts client IDs up to 255 characters long.
-	ClientIDList []*string `json:"clientIDList,omitempty"`
+	ClientIDs []*string `json:"clientIDs,omitempty"`
 	// A list of tags that you want to attach to the new IAM OpenID Connect (OIDC)
 	// provider. Each tag consists of a key name and an associated value. For more
 	// information about tagging, see Tagging IAM resources (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_tags.html)
@@ -62,7 +62,7 @@ type OpenIDConnectProviderSpec struct {
 	// the thumbprint for an OpenID Connect provider (https://docs.aws.amazon.com/IAM/latest/UserGuide/identity-providers-oidc-obtain-thumbprint.html)
 	// in the IAM User Guide.
 	// +kubebuilder:validation:Required
-	ThumbprintList []*string `json:"thumbprintList"`
+	Thumbprints []*string `json:"thumbprints"`
 	// The URL of the identity provider. The URL must begin with https:// and should
 	// correspond to the iss claim in the provider's OpenID Connect ID tokens. Per
 	// the OIDC standard, path components are allowed but query parameters are not.

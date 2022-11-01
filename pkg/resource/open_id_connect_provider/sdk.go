@@ -94,9 +94,9 @@ func (rm *resourceManager) sdkFind(
 			f0elem = *f0iter
 			f0 = append(f0, &f0elem)
 		}
-		ko.Spec.ClientIDList = f0
+		ko.Spec.ClientIDs = f0
 	} else {
-		ko.Spec.ClientIDList = nil
+		ko.Spec.ClientIDs = nil
 	}
 	if resp.Tags != nil {
 		f2 := []*svcapitypes.Tag{}
@@ -121,9 +121,9 @@ func (rm *resourceManager) sdkFind(
 			f3elem = *f3iter
 			f3 = append(f3, &f3elem)
 		}
-		ko.Spec.ThumbprintList = f3
+		ko.Spec.Thumbprints = f3
 	} else {
-		ko.Spec.ThumbprintList = nil
+		ko.Spec.Thumbprints = nil
 	}
 	if resp.Url != nil {
 		ko.Spec.URL = resp.Url
@@ -228,9 +228,9 @@ func (rm *resourceManager) newCreateRequestPayload(
 ) (*svcsdk.CreateOpenIDConnectProviderInput, error) {
 	res := &svcsdk.CreateOpenIDConnectProviderInput{}
 
-	if r.ko.Spec.ClientIDList != nil {
+	if r.ko.Spec.ClientIDs != nil {
 		f0 := []*string{}
-		for _, f0iter := range r.ko.Spec.ClientIDList {
+		for _, f0iter := range r.ko.Spec.ClientIDs {
 			var f0elem string
 			f0elem = *f0iter
 			f0 = append(f0, &f0elem)
@@ -251,9 +251,9 @@ func (rm *resourceManager) newCreateRequestPayload(
 		}
 		res.SetTags(f1)
 	}
-	if r.ko.Spec.ThumbprintList != nil {
+	if r.ko.Spec.Thumbprints != nil {
 		f2 := []*string{}
-		for _, f2iter := range r.ko.Spec.ThumbprintList {
+		for _, f2iter := range r.ko.Spec.Thumbprints {
 			var f2elem string
 			f2elem = *f2iter
 			f2 = append(f2, &f2elem)
@@ -298,8 +298,8 @@ func (rm *resourceManager) newUpdateThumbprintRequestPayload(
 ) (*svcsdk.UpdateOpenIDConnectProviderThumbprintInput, error) {
 	res := &svcsdk.UpdateOpenIDConnectProviderThumbprintInput{}
 
-	if r.ko.Spec.ThumbprintList != nil {
-		res.SetThumbprintList(*&r.ko.Spec.ThumbprintList)
+	if r.ko.Spec.Thumbprints != nil {
+		res.SetThumbprintList(*&r.ko.Spec.Thumbprints)
 	}
 	if r.ko.Status.ACKResourceMetadata.ARN != nil {
 		res.SetOpenIDConnectProviderArn(string(*r.ko.Status.ACKResourceMetadata.ARN))

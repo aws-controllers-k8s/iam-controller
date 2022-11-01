@@ -171,6 +171,16 @@ resources:
       terminal_codes:
         - InvalidInput 
         - EntityAlreadyExists
+    renames:
+      operations:
+        CreateOpenIDConnectProvider:
+          input_fields:
+            ClientIDList: ClientIDs
+            ThumbprintList: Thumbprints
+        GetOpenIDConnectProvider:
+          output_fields:
+            ClientIDList: ClientIDs
+            ThumbprintList: Thumbprints
     fields:
       Url:
         is_immutable: true

@@ -44,7 +44,7 @@ func (rm *resourceManager) customUpdateOpenIDConnectProvider(
 		return nil, ackerr.NewTerminalError(fmt.Errorf(msg))
 	}
 
-	if delta.DifferentAt("Spec.ThumbprintList") {
+	if delta.DifferentAt("Spec.Thumbprints") {
 		// Update the thumbprint list
 		thumbprintInput, err := rm.newUpdateThumbprintRequestPayload(ctx, desired)
 		if err != nil {
@@ -60,7 +60,7 @@ func (rm *resourceManager) customUpdateOpenIDConnectProvider(
 		}
 	}
 
-	if delta.DifferentAt("Spec.ClientIDList") {
+	if delta.DifferentAt("Spec.ClientIDs") {
 		// Update the client ID list
 		// here we only have an "add" and a "remove"
 		// https://docs.aws.amazon.com/sdk-for-go/api/service/iam/#IAM.AddClientIDToOpenIDConnectProvider and
@@ -68,10 +68,10 @@ func (rm *resourceManager) customUpdateOpenIDConnectProvider(
 		// so we have to compute the diff ourselves
 		desiredClientIDs := map[string]bool{}
 		latestClientIDs := map[string]bool{}
-		for _, desiredClientID := range desired.ko.Spec.ClientIDList {
+		for _, desiredClientID := range desired.ko.Spec.ClientIDs {
 			desiredClientIDs[*desiredClientID] = true
 		}
-		for _, latestClientID := range latest.ko.Spec.ClientIDList {
+		for _, latestClientID := range latest.ko.Spec.ClientIDs {
 			latestClientIDs[*latestClientID] = true
 		}
 

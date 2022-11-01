@@ -4,9 +4,9 @@ metadata:
   name: $OPEN_ID_CONNECT_PROVIDER_NAME
 spec:
   url: $URL
-  clientIDList:
+  clientIDs:
     - $CLIENT_ID
-  thumbprintList:
+  thumbprints:
     - $THUMBPRINT
   tags:
     - key: $TAG_KEY

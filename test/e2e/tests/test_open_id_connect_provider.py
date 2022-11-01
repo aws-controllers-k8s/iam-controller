@@ -123,7 +123,7 @@ class TestOpenIdConnectProvider:
         ]  # thumbprints must be 40 characters
         updates = {
             "spec": {
-                "thumbprintList": new_thumbprints,
+                "thumbprints": new_thumbprints,
                 "tags": [{"key": "key2", "value": "val2"}],
             },
         }
@@ -139,8 +139,8 @@ class TestOpenIdConnectProvider:
         latest_tags = open_id_connect_provider.get_tags(oidc_provider_arn)
         assert tag.cleaned(latest_tags) == after_update_expected_tags
 
-        # validate that changing the URL results in a terminal condition
-        update_url = {"spec": {"url": "https://some.other.domain.com"}}
+        # validate that changing the URL results in an advisory condition
+        update_url = {"spec": {"url": "https://other.example.com"}}
         logging.debug(f"\n\n**** OIDCProvider update of URL intended to fail")
         k8s.patch_custom_resource(ref, update_url)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)

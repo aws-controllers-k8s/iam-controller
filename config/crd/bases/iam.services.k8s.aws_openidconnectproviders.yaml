@@ -36,7 +36,7 @@ spec:
           spec:
             description: OpenIDConnectProviderSpec defines the desired state of OpenIDConnectProvider.
             properties:
-              clientIDList:
+              clientIDs:
                 description: "Provides a list of client IDs, also known as audiences.
                   When a mobile or web app registers with an OpenID Connect provider,
                   they establish a value that identifies the application. This is
@@ -70,7 +70,7 @@ spec:
                       type: string
                   type: object
                 type: array
-              thumbprintList:
+              thumbprints:
                 description: "A list of server certificate thumbprints for the OpenID
                   Connect (OIDC) identity provider's server certificates. Typically
                   this list includes only one entry. However, IAM lets you have up
@@ -103,7 +103,7 @@ spec:
                   will get an error."
                 type: string
             required:
-            - thumbprintList
+            - thumbprints
             - url
             type: object
           status:
