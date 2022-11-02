@@ -5,7 +5,7 @@ ignore:
    #- Group
    - InstanceProfile
    - LoginProfile
-   - OpenIDConnectProvider
+   #- OpenIDConnectProvider
    #- Policy
    - PolicyVersion
    #- Role
@@ -161,3 +161,33 @@ resources:
       Tags:
         compare:
           is_ignored: true
+  OpenIDConnectProvider:
+    hooks:
+      delta_pre_compare:
+        code: customPreCompare(delta, a, b)
+      sdk_read_one_post_set_output:
+        template_path: hooks/open_id_connect_provider/sdk_read_one_post_set_output.go.tpl
+    exceptions:
+      terminal_codes:
+        - InvalidInput 
+        - EntityAlreadyExists
+    renames:
+      operations:
+        CreateOpenIDConnectProvider:
+          input_fields:
+            ClientIDList: ClientIDs
+            ThumbprintList: Thumbprints
+        GetOpenIDConnectProvider:
+          output_fields:
+            ClientIDList: ClientIDs
+            ThumbprintList: Thumbprints
+    fields:
+      Url:
+        is_immutable: true
+        compare:
+          is_ignored: true
+      Tags:
+        compare:
+          is_ignored: true
+    update_operation:
+      custom_method_name: customUpdateOpenIDConnectProvider

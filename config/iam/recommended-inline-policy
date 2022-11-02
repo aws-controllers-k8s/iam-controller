@@ -31,7 +31,16 @@
                 "iam:TagPolicy",
                 "iam:UntagPolicy",
                 "iam:TagRole",
-                "iam:UntagRole"
+                "iam:UntagRole",
+                "iam:RemoveClientIDFromOpenIDConnectProvider",
+                "iam:ListOpenIDConnectProviderTags",
+                "iam:UpdateOpenIDConnectProviderThumbprint",
+                "iam:UntagOpenIDConnectProvider",
+                "iam:AddClientIDToOpenIDConnectProvider",
+                "iam:DeleteOpenIDConnectProvider",
+                "iam:GetOpenIDConnectProvider",
+                "iam:TagOpenIDConnectProvider",
+                "iam:CreateOpenIDConnectProvider"
             ],
             "Resource": "*"
         }

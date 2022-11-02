@@ -168,11 +168,11 @@ type GroupDetail struct {
 //
 // This data type is used as a response element in the following operations:
 //
-//    * CreateGroup
+//   - CreateGroup
 //
-//    * GetGroup
+//   - GetGroup
 //
-//    * ListGroups
+//   - ListGroups
 type Group_SDK struct {
 	// The Amazon Resource Name (ARN). ARNs are unique identifiers for Amazon Web
 	// Services resources.
@@ -190,13 +190,13 @@ type Group_SDK struct {
 //
 // This data type is used as a response element in the following operations:
 //
-//    * CreateInstanceProfile
+//   - CreateInstanceProfile
 //
-//    * GetInstanceProfile
+//   - GetInstanceProfile
 //
-//    * ListInstanceProfiles
+//   - ListInstanceProfiles
 //
-//    * ListInstanceProfilesForRole
+//   - ListInstanceProfilesForRole
 type InstanceProfile struct {
 	// The Amazon Resource Name (ARN). ARNs are unique identifiers for Amazon Web
 	// Services resources.
@@ -617,11 +617,11 @@ type TrackedActionLastAccessed struct {
 //
 // This data type is used as a response element in the following operations:
 //
-//    * CreateUser
+//   - CreateUser
 //
-//    * GetUser
+//   - GetUser
 //
-//    * ListUsers
+//   - ListUsers
 type User struct {
 	// The Amazon Resource Name (ARN). ARNs are unique identifiers for Amazon Web
 	// Services resources.
