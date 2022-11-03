@@ -304,3 +304,59 @@ func (rm *resourceManager) removeTags(
 	rm.metrics.RecordAPICall("UPDATE", "UntagOpenIDConnectProvider", err)
 	return err
 }
+
+// returns an SDK-specific struct for the HTTP request
+// payload of the UpdateThumbprint API call for the resource
+func (rm *resourceManager) newUpdateThumbprintRequestPayload(
+	ctx context.Context,
+	r *resource,
+) (*svcsdk.UpdateOpenIDConnectProviderThumbprintInput, error) {
+	res := &svcsdk.UpdateOpenIDConnectProviderThumbprintInput{}
+
+	if r.ko.Spec.Thumbprints != nil {
+		res.SetThumbprintList(*&r.ko.Spec.Thumbprints)
+	}
+	if r.ko.Status.ACKResourceMetadata.ARN != nil {
+		res.SetOpenIDConnectProviderArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
+	}
+
+	return res, nil
+}
+
+// returns an SDK-specific struct for the HTTP request
+// payload of the AddClientIDToOpenIDConnectProvider API call for the resource
+func (rm *resourceManager) newAddClientIDRequestPayload(
+	ctx context.Context,
+	r *resource,
+	clientId *string,
+) (*svcsdk.AddClientIDToOpenIDConnectProviderInput, error) {
+	res := &svcsdk.AddClientIDToOpenIDConnectProviderInput{}
+
+	if clientId != nil {
+		res.SetClientID(*clientId)
+	}
+	if r.ko.Status.ACKResourceMetadata.ARN != nil {
+		res.SetOpenIDConnectProviderArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
+	}
+
+	return res, nil
+}
+
+// returns an SDK-specific struct for the HTTP request
+// payload of the RemoveClientIDFromOpenIDConnectProvider API call for the resource
+func (rm *resourceManager) newRemoveClientIDRequestPayload(
+	ctx context.Context,
+	r *resource,
+	clientId *string,
+) (*svcsdk.RemoveClientIDFromOpenIDConnectProviderInput, error) {
+	res := &svcsdk.RemoveClientIDFromOpenIDConnectProviderInput{}
+
+	if clientId != nil {
+		res.SetClientID(*clientId)
+	}
+	if r.ko.Status.ACKResourceMetadata.ARN != nil {
+		res.SetOpenIDConnectProviderArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
+	}
+
+	return res, nil
+}
