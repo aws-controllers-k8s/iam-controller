@@ -274,76 +274,8 @@ func (rm *resourceManager) sdkUpdate(
 	desired *resource,
 	latest *resource,
 	delta *ackcompare.Delta,
-) (updated *resource, err error) {
-   return rm.customUpdateOpenIDConnectProvider(ctx, desired, latest, delta)
-}
-
-// getImmutableFieldChanges returns list of immutable fields from the
-func (rm *resourceManager) getImmutableFieldChanges(
-		delta *ackcompare.Delta,
-) []string {
-	var fields []string
-	if delta.DifferentAt("Spec.URL") {
-			fields = append(fields, "URL")
-	}
-
-	return fields
-}
-
-// returns an SDK-specific struct for the HTTP request
-// payload of the UpdateThumbprint API call for the resource
-func (rm *resourceManager) newUpdateThumbprintRequestPayload(
-	ctx context.Context,
-	r *resource,
-) (*svcsdk.UpdateOpenIDConnectProviderThumbprintInput, error) {
-	res := &svcsdk.UpdateOpenIDConnectProviderThumbprintInput{}
-
-	if r.ko.Spec.Thumbprints != nil {
-		res.SetThumbprintList(*&r.ko.Spec.Thumbprints)
-	}
-	if r.ko.Status.ACKResourceMetadata.ARN != nil {
-		res.SetOpenIDConnectProviderArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
-	}
-
-	return res, nil
-}
-
-// returns an SDK-specific struct for the HTTP request
-// payload of the AddClientIDToOpenIDConnectProvider API call for the resource
-func (rm *resourceManager) newAddClientIDRequestPayload(
-	ctx context.Context,
-	r *resource,
-	clientId *string,
-) (*svcsdk.AddClientIDToOpenIDConnectProviderInput, error) {
-	res := &svcsdk.AddClientIDToOpenIDConnectProviderInput{}
-
-	if clientId != nil {
-		res.SetClientID(*clientId)
-	}
-	if r.ko.Status.ACKResourceMetadata.ARN != nil {
-		res.SetOpenIDConnectProviderArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
-	}
-
-	return res, nil
-}
-
-// returns an SDK-specific struct for the HTTP request
-// payload of the RemoveClientIDFromOpenIDConnectProvider API call for the resource
-func (rm *resourceManager) newRemoveClientIDRequestPayload(
-	ctx context.Context,
-	r *resource,
-	clientId *string,
-) (*svcsdk.RemoveClientIDFromOpenIDConnectProviderInput, error) {
-	res := &svcsdk.RemoveClientIDFromOpenIDConnectProviderInput{}
-
-	if clientId != nil {
-		res.SetClientID(*clientId)
-	}
-	if r.ko.Status.ACKResourceMetadata.ARN != nil {
-		res.SetOpenIDConnectProviderArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
-	}
-
-	return res, nil
+) (*resource, error) {
+	return rm.customUpdateOpenIDConnectProvider(ctx, desired, latest, delta)
 }
 
 // sdkDelete deletes the supplied resource in the backend AWS service API
@@ -494,4 +426,16 @@ func (rm *resourceManager) terminalAWSError(err error) bool {
 	default:
 		return false
 	}
+}
+
+// getImmutableFieldChanges returns list of immutable fields from the
+func (rm *resourceManager) getImmutableFieldChanges(
+	delta *ackcompare.Delta,
+) []string {
+	var fields []string
+	if delta.DifferentAt("Spec.URL") {
+		fields = append(fields, "URL")
+	}
+
+	return fields
 }
