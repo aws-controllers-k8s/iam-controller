@@ -182,7 +182,7 @@ resources:
             ClientIDList: ClientIDs
             ThumbprintList: Thumbprints
     fields:
-      Url:
+      URL:
         is_immutable: true
         compare:
           is_ignored: true
