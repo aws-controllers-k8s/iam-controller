@@ -314,7 +314,7 @@ func (rm *resourceManager) newUpdateThumbprintRequestPayload(
 	res := &svcsdk.UpdateOpenIDConnectProviderThumbprintInput{}
 
 	if r.ko.Spec.Thumbprints != nil {
-		res.SetThumbprintList(*&r.ko.Spec.Thumbprints)
+		res.SetThumbprintList(r.ko.Spec.Thumbprints)
 	}
 	if r.ko.Status.ACKResourceMetadata.ARN != nil {
 		res.SetOpenIDConnectProviderArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
