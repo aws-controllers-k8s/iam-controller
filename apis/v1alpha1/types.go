@@ -168,11 +168,11 @@ type GroupDetail struct {
 //
 // This data type is used as a response element in the following operations:
 //
-//   - CreateGroup
+//    * CreateGroup
 //
-//   - GetGroup
+//    * GetGroup
 //
-//   - ListGroups
+//    * ListGroups
 type Group_SDK struct {
 	// The Amazon Resource Name (ARN). ARNs are unique identifiers for Amazon Web
 	// Services resources.
@@ -190,13 +190,13 @@ type Group_SDK struct {
 //
 // This data type is used as a response element in the following operations:
 //
-//   - CreateInstanceProfile
+//    * CreateInstanceProfile
 //
-//   - GetInstanceProfile
+//    * GetInstanceProfile
 //
-//   - ListInstanceProfiles
+//    * ListInstanceProfiles
 //
-//   - ListInstanceProfilesForRole
+//    * ListInstanceProfilesForRole
 type InstanceProfile struct {
 	// The Amazon Resource Name (ARN). ARNs are unique identifiers for Amazon Web
 	// Services resources.
@@ -613,39 +613,6 @@ type TrackedActionLastAccessed struct {
 	LastAccessedTime   *metav1.Time `json:"lastAccessedTime,omitempty"`
 }
 
-// Contains information about an IAM user entity.
-//
-// This data type is used as a response element in the following operations:
-//
-//   - CreateUser
-//
-//   - GetUser
-//
-//   - ListUsers
-type User struct {
-	// The Amazon Resource Name (ARN). ARNs are unique identifiers for Amazon Web
-	// Services resources.
-	//
-	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
-	// in the Amazon Web Services General Reference.
-	ARN              *string      `json:"arn,omitempty"`
-	CreateDate       *metav1.Time `json:"createDate,omitempty"`
-	PasswordLastUsed *metav1.Time `json:"passwordLastUsed,omitempty"`
-	Path             *string      `json:"path,omitempty"`
-	// Contains information about an attached permissions boundary.
-	//
-	// An attached permissions boundary is a managed policy that has been attached
-	// to a user or role to set the permissions boundary.
-	//
-	// For more information about permissions boundaries, see Permissions boundaries
-	// for IAM identities (https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html)
-	// in the IAM User Guide.
-	PermissionsBoundary *AttachedPermissionsBoundary `json:"permissionsBoundary,omitempty"`
-	Tags                []*Tag                       `json:"tags,omitempty"`
-	UserID              *string                      `json:"userID,omitempty"`
-	UserName            *string                      `json:"userName,omitempty"`
-}
-
 // Contains information about an IAM user, including all the user's policies
 // and all the IAM groups the user is in.
 //
@@ -674,6 +641,39 @@ type UserDetail struct {
 	UserName            *string                      `json:"userName,omitempty"`
 }
 
+// Contains information about an IAM user entity.
+//
+// This data type is used as a response element in the following operations:
+//
+//    * CreateUser
+//
+//    * GetUser
+//
+//    * ListUsers
+type User_SDK struct {
+	// The Amazon Resource Name (ARN). ARNs are unique identifiers for Amazon Web
+	// Services resources.
+	//
+	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
+	// in the Amazon Web Services General Reference.
+	ARN              *string      `json:"arn,omitempty"`
+	CreateDate       *metav1.Time `json:"createDate,omitempty"`
+	PasswordLastUsed *metav1.Time `json:"passwordLastUsed,omitempty"`
+	Path             *string      `json:"path,omitempty"`
+	// Contains information about an attached permissions boundary.
+	//
+	// An attached permissions boundary is a managed policy that has been attached
+	// to a user or role to set the permissions boundary.
+	//
+	// For more information about permissions boundaries, see Permissions boundaries
+	// for IAM identities (https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html)
+	// in the IAM User Guide.
+	PermissionsBoundary *AttachedPermissionsBoundary `json:"permissionsBoundary,omitempty"`
+	Tags                []*Tag                       `json:"tags,omitempty"`
+	UserID              *string                      `json:"userID,omitempty"`
+	UserName            *string                      `json:"userName,omitempty"`
+}
+
 // Contains information about a virtual MFA device.
 type VirtualMFADevice struct {
 	EnableDate *metav1.Time `json:"enableDate,omitempty"`
@@ -687,5 +687,5 @@ type VirtualMFADevice struct {
 	//    * GetUser
 	//
 	//    * ListUsers
-	User *User `json:"user,omitempty"`
+	User *User_SDK `json:"user,omitempty"`
 }

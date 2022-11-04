@@ -1,0 +1,9 @@
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: User
+metadata:
+  name: $USER_NAME
+spec:
+  name: $USER_NAME
+  tags:
+    - key: tag1
+      value: val1

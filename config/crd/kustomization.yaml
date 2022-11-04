@@ -7,3 +7,4 @@ resources:
   - bases/iam.services.k8s.aws_openidconnectproviders.yaml
   - bases/iam.services.k8s.aws_policies.yaml
   - bases/iam.services.k8s.aws_roles.yaml
+  - bases/iam.services.k8s.aws_users.yaml

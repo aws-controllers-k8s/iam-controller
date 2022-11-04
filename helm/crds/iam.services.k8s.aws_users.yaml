@@ -5,20 +5,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
-  name: groups.iam.services.k8s.aws
+  name: users.iam.services.k8s.aws
 spec:
   group: iam.services.k8s.aws
   names:
-    kind: Group
-    listKind: GroupList
-    plural: groups
-    singular: group
+    kind: User
+    listKind: UserList
+    plural: users
+    singular: user
   scope: Namespaced
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Group is the Schema for the Groups API
+        description: User is the Schema for the Users API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,21 +33,20 @@ spec:
           metadata:
             type: object
           spec:
-            description: "GroupSpec defines the desired state of Group. \n Contains
-              information about an IAM group entity. \n This data type is used as
-              a response element in the following operations: \n * CreateGroup \n
-              * GetGroup \n * ListGroups"
+            description: "UserSpec defines the desired state of User. \n Contains
+              information about an IAM user entity. \n This data type is used as a
+              response element in the following operations: \n * CreateUser \n * GetUser
+              \n * ListUsers"
             properties:
               name:
-                description: "The name of the group to create. Do not include the
-                  path in this value. \n IAM user, group, role, and policy names must
-                  be unique within the account. Names are not distinguished by case.
-                  For example, you cannot create resources named both \"MyResource\"
-                  and \"myresource\"."
+                description: "The name of the user to create. \n IAM user, group,
+                  role, and policy names must be unique within the account. Names
+                  are not distinguished by case. For example, you cannot create resources
+                  named both \"MyResource\" and \"myresource\"."
                 type: string
               path:
-                description: "The path to the group. For more information about paths,
-                  see IAM identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
+                description: "The path for the user name. For more information about
+                  paths, see IAM identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
                   in the IAM User Guide. \n This parameter is optional. If it is not
                   included, it defaults to a slash (/). \n This parameter allows (through
                   its regex pattern (http://wikipedia.org/wiki/regex)) a string of
@@ -57,15 +56,38 @@ spec:
                   the DEL character (\\u007F), including most punctuation characters,
                   digits, and upper and lowercased letters."
                 type: string
+              permissionsBoundary:
+                description: The ARN of the policy that is used to set the permissions
+                  boundary for the user.
+                type: string
               policies:
                 items:
                   type: string
+                type: array
+              tags:
+                description: "A list of tags that you want to attach to the new user.
+                  Each tag consists of a key name and an associated value. For more
+                  information about tagging, see Tagging IAM resources (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_tags.html)
+                  in the IAM User Guide. \n If any one of the tags is invalid or if
+                  you exceed the allowed maximum number of tags, then the entire request
+                  fails and the resource is not created."
+                items:
+                  description: A structure that represents user-provided metadata
+                    that can be associated with an IAM resource. For more information
+                    about tagging, see Tagging IAM resources (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_tags.html)
+                    in the IAM User Guide.
+                  properties:
+                    key:
+                      type: string
+                    value:
+                      type: string
+                  type: object
                 type: array
             required:
             - name
             type: object
           status:
-            description: GroupStatus defines the observed state of Group
+            description: UserStatus defines the observed state of User
             properties:
               ackResourceMetadata:
                 description: All CRs managed by ACK have a common `Status.ACKResourceMetadata`
@@ -130,11 +152,29 @@ spec:
                 type: array
               createDate:
                 description: The date and time, in ISO 8601 date-time format (http://www.iso.org/iso/iso8601),
-                  when the group was created.
+                  when the user was created.
                 format: date-time
                 type: string
-              groupID:
-                description: The stable and unique string identifying the group. For
+              passwordLastUsed:
+                description: "The date and time, in ISO 8601 date-time format (http://www.iso.org/iso/iso8601),
+                  when the user's password was last used to sign in to an Amazon Web
+                  Services website. For a list of Amazon Web Services websites that
+                  capture a user's last sign-in time, see the Credential reports (https://docs.aws.amazon.com/IAM/latest/UserGuide/credential-reports.html)
+                  topic in the IAM User Guide. If a password is used more than once
+                  in a five-minute span, only the first use is returned in this field.
+                  If the field is null (no value), then it indicates that they never
+                  signed in with a password. This can be because: \n * The user never
+                  had a password. \n * A password exists but has not been used since
+                  IAM started tracking this information on October 20, 2014. \n A
+                  null value does not mean that the user never had a password. Also,
+                  if the user does not currently have a password but had one in the
+                  past, then this field contains the date and time the most recent
+                  password was used. \n This value is returned only in the GetUser
+                  and ListUsers operations."
+                format: date-time
+                type: string
+              userID:
+                description: The stable and unique string identifying the user. For
                   more information about IDs, see IAM identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
                   in the IAM User Guide.
                 type: string
