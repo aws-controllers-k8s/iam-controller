@@ -1,3 +1,8 @@
+    if delta.DifferentAt("Spec.PermissionsBoundary") {
+        if err := rm.syncRolePermissionsBoundary(ctx, &resource{ko}); err != nil {
+            return nil, err
+        }
+    }
     if err := rm.syncPolicies(ctx, &resource{ko}); err != nil {
         return nil, err
     }

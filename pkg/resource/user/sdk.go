@@ -345,6 +345,11 @@ func (rm *resourceManager) sdkUpdate(
 	ko := desired.ko.DeepCopy()
 
 	rm.setStatusDefaults(ko)
+	if delta.DifferentAt("Spec.PermissionsBoundary") {
+		if err := rm.syncUserPermissionsBoundary(ctx, &resource{ko}); err != nil {
+			return nil, err
+		}
+	}
 	if delta.DifferentAt("Spec.Policies") {
 		if err := rm.syncPolicies(ctx, &resource{ko}); err != nil {
 			return nil, err
