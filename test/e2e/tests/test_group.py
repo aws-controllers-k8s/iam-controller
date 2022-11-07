@@ -68,14 +68,21 @@ class TestGroup:
         policy_arns = [
             "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
         ]
+        new_path = "/engineering/"
         updates = {
-            "spec": {"policies": policy_arns},
+            "spec": {
+                "policies": policy_arns,
+                "path": new_path,
+            },
         }
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
         latest_policy_arns = group.get_attached_policy_arns(group_name)
         assert latest_policy_arns == policy_arns
+
+        latest_group = group.get(group_name)
+        assert latest_group["Path"] == new_path
 
         k8s.delete_custom_resource(ref)
 
