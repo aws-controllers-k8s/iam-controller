@@ -25,6 +25,55 @@ import (
 	commonutil "github.com/aws-controllers-k8s/iam-controller/pkg/util"
 )
 
+// putUserPermissionsBoundary calls the IAM API to set a given user
+// permission boundary.
+func (rm *resourceManager) putUserPermissionsBoundary(
+	ctx context.Context,
+	r *resource,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.putUserPermissionsBoundary")
+	defer func() { exit(err) }()
+
+	input := &svcsdk.PutUserPermissionsBoundaryInput{
+		UserName:            r.ko.Spec.Name,
+		PermissionsBoundary: r.ko.Spec.PermissionsBoundary,
+	}
+	_, err = rm.sdkapi.PutUserPermissionsBoundaryWithContext(ctx, input)
+	rm.metrics.RecordAPICall("UPDATE", "PutUserPermissionsBoundary", err)
+	return err
+}
+
+// deleteUserPermissionsBoundary calls the IAM API to delete a given user
+// permission boundary.
+func (rm *resourceManager) deleteUserPermissionsBoundary(
+	ctx context.Context,
+	r *resource,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.deleteUserPermissionsBoundary")
+	defer func() { exit(err) }()
+
+	input := &svcsdk.DeleteUserPermissionsBoundaryInput{UserName: r.ko.Spec.Name}
+	_, err = rm.sdkapi.DeleteUserPermissionsBoundaryWithContext(ctx, input)
+	rm.metrics.RecordAPICall("UPDATE", "DeleteUserPermissionsBoundary", err)
+	return err
+}
+
+// syncUserPermissionsBoundary synchronises user permissions boundary
+func (rm *resourceManager) syncUserPermissionsBoundary(
+	ctx context.Context,
+	r *resource,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.syncUserPermissionsBoundary")
+	defer func() { exit(err) }()
+	if r.ko.Spec.PermissionsBoundary == nil || *r.ko.Spec.PermissionsBoundary == "" {
+		return rm.deleteUserPermissionsBoundary(ctx, r)
+	}
+	return rm.putUserPermissionsBoundary(ctx, r)
+}
+
 // syncPolicies examines the PolicyARNs in the supplied Group and calls the
 // ListGroupPolicies, AttachGroupPolicy and DetachGroupPolicy APIs to ensure
 // that the set of attached policies stays in sync with the Group.Spec.Policies

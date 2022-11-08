@@ -26,6 +26,55 @@ import (
 	commonutil "github.com/aws-controllers-k8s/iam-controller/pkg/util"
 )
 
+// putRolePermissionsBoundary calls the IAM API to set a given role
+// permission boundary.
+func (rm *resourceManager) putRolePermissionsBoundary(
+	ctx context.Context,
+	r *resource,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.putRolePermissionsBoundary")
+	defer func() { exit(err) }()
+
+	input := &svcsdk.PutRolePermissionsBoundaryInput{
+		RoleName:            r.ko.Spec.Name,
+		PermissionsBoundary: r.ko.Spec.PermissionsBoundary,
+	}
+	_, err = rm.sdkapi.PutRolePermissionsBoundaryWithContext(ctx, input)
+	rm.metrics.RecordAPICall("UPDATE", "PutRolePermissionsBoundary", err)
+	return err
+}
+
+// deleteRolePermissionsBoundary calls the IAM API to delete a given role
+// permission boundary.
+func (rm *resourceManager) deleteRolePermissionsBoundary(
+	ctx context.Context,
+	r *resource,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.deleteRolePermissionsBoundary")
+	defer func() { exit(err) }()
+
+	input := &svcsdk.DeleteRolePermissionsBoundaryInput{RoleName: r.ko.Spec.Name}
+	_, err = rm.sdkapi.DeleteRolePermissionsBoundaryWithContext(ctx, input)
+	rm.metrics.RecordAPICall("UPDATE", "DeleteRolePermissionsBoundary", err)
+	return err
+}
+
+// syncRolePermissionsBoundary synchronises role permissions boundary
+func (rm *resourceManager) syncRolePermissionsBoundary(
+	ctx context.Context,
+	r *resource,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.syncRolePermissionsBoundary")
+	defer func() { exit(err) }()
+	if r.ko.Spec.PermissionsBoundary == nil || *r.ko.Spec.PermissionsBoundary == "" {
+		return rm.deleteRolePermissionsBoundary(ctx, r)
+	}
+	return rm.putRolePermissionsBoundary(ctx, r)
+}
+
 // syncPolicies examines the PolicyARNs in the supplied Role and calls the
 // ListRolePolicies, AttachRolePolicy and DetachRolePolicy APIs to ensure that
 // the set of attached policies stays in sync with the Role.Spec.Policies

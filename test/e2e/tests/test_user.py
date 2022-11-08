@@ -70,11 +70,13 @@ class TestUser:
         policy_arns = [
             "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
         ]
+        permissionsBoundary = 'arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess'
         new_path = "/engineering/"
         updates = {
             "spec": {
                 "policies": policy_arns,
                 "path": new_path,
+                "permissionsBoundary": permissionsBoundary,
             },
         }
         k8s.patch_custom_resource(ref, updates)
@@ -85,6 +87,7 @@ class TestUser:
 
         latest_user = user.get(user_name)
         assert latest_user["Path"] == new_path
+        assert latest_user["PermissionsBoundary"]["PermissionsBoundaryArn"] == permissionsBoundary
 
         # Same update code path check for tags...
         latest_tags = user.get_tags(user_name)
