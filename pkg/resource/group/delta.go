@@ -58,6 +58,9 @@ func newResourceDelta(
 	if !ackcompare.SliceStringPEqual(a.ko.Spec.Policies, b.ko.Spec.Policies) {
 		delta.Add("Spec.Policies", a.ko.Spec.Policies, b.ko.Spec.Policies)
 	}
+	if !reflect.DeepEqual(a.ko.Spec.PolicyRefs, b.ko.Spec.PolicyRefs) {
+		delta.Add("Spec.PolicyRefs", a.ko.Spec.PolicyRefs, b.ko.Spec.PolicyRefs)
+	}
 
 	return delta
 }

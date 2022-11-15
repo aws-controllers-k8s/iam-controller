@@ -54,7 +54,8 @@ type GroupSpec struct {
 	// letters.
 	Path *string `json:"path,omitempty"`
 
-	Policies []*string `json:"policies,omitempty"`
+	Policies   []*string                                  `json:"policies,omitempty"`
+	PolicyRefs []*ackv1alpha1.AWSResourceReferenceWrapper `json:"policyRefs,omitempty"`
 }
 
 // GroupStatus defines the observed state of Group
