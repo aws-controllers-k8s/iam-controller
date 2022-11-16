@@ -116,12 +116,10 @@ func (rm *resourceManager) sdkFind(
 	}
 
 	rm.setStatusDefaults(ko)
-	if policies, err := rm.getPolicies(ctx, &resource{ko}); err != nil {
+	ko.Spec.Policies, err = rm.getPolicies(ctx, &resource{ko})
+	if err != nil {
 		return nil, err
-	} else {
-		ko.Spec.Policies = policies
 	}
-
 	return &resource{ko}, nil
 }
 
@@ -206,10 +204,12 @@ func (rm *resourceManager) sdkCreate(
 	}
 
 	rm.setStatusDefaults(ko)
-	if err := rm.syncPolicies(ctx, &resource{ko}); err != nil {
+	// This causes syncPolicies to create all associated policies to the group
+	groupCpy := ko.DeepCopy()
+	groupCpy.Spec.Policies = nil
+	if err := rm.syncPolicies(ctx, desired, &resource{ko: groupCpy}); err != nil {
 		return nil, err
 	}
-
 	return &resource{ko}, nil
 }
 
@@ -244,6 +244,15 @@ func (rm *resourceManager) sdkUpdate(
 	defer func() {
 		exit(err)
 	}()
+	if delta.DifferentAt("Spec.Policies") {
+		err = rm.syncPolicies(ctx, desired, latest)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.PermissionsBoundary") {
+		return desired, nil
+	}
 	input, err := rm.newUpdateRequestPayload(ctx, desired)
 	if err != nil {
 		return nil, err
@@ -272,10 +281,6 @@ func (rm *resourceManager) sdkUpdate(
 	ko := desired.ko.DeepCopy()
 
 	rm.setStatusDefaults(ko)
-	if err := rm.syncPolicies(ctx, &resource{ko}); err != nil {
-		return nil, err
-	}
-
 	return &resource{ko}, nil
 }
 
@@ -304,13 +309,12 @@ func (rm *resourceManager) sdkDelete(
 	defer func() {
 		exit(err)
 	}()
-	// This causes syncPolicies to delete all associated policies from the
-	// group
-	r.ko.Spec.Policies = []*string{}
-	if err := rm.syncPolicies(ctx, r); err != nil {
+	// This causes syncPolicies to delete all associated policies from the group
+	groupCpy := r.ko.DeepCopy()
+	groupCpy.Spec.Policies = nil
+	if err := rm.syncPolicies(ctx, &resource{ko: groupCpy}, r); err != nil {
 		return nil, err
 	}
-
 	input, err := rm.newDeleteRequestPayload(r)
 	if err != nil {
 		return nil, err

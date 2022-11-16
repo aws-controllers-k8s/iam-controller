@@ -81,40 +81,38 @@ func (rm *resourceManager) syncRolePermissionsBoundary(
 // field, which is a list of strings containing Policy ARNs.
 func (rm *resourceManager) syncPolicies(
 	ctx context.Context,
-	r *resource,
+	desired *resource,
+	latest *resource,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.syncPolicies")
-	defer exit(err)
+	defer func() { exit(err) }()
 	toAdd := []*string{}
 	toDelete := []*string{}
 
-	existingPolicies, err := rm.getPolicies(ctx, r)
-	if err != nil {
-		return err
-	}
+	existingPolicies := latest.ko.Spec.Policies
 
-	for _, p := range r.ko.Spec.Policies {
+	for _, p := range desired.ko.Spec.Policies {
 		if !ackutil.InStringPs(*p, existingPolicies) {
 			toAdd = append(toAdd, p)
 		}
 	}
 
 	for _, p := range existingPolicies {
-		if !ackutil.InStringPs(*p, r.ko.Spec.Policies) {
+		if !ackutil.InStringPs(*p, desired.ko.Spec.Policies) {
 			toDelete = append(toDelete, p)
 		}
 	}
 
 	for _, p := range toAdd {
 		rlog.Debug("adding policy to role", "policy_arn", *p)
-		if err = rm.addPolicy(ctx, r, p); err != nil {
+		if err = rm.addPolicy(ctx, desired, p); err != nil {
 			return err
 		}
 	}
 	for _, p := range toDelete {
 		rlog.Debug("removing policy from role", "policy_arn", *p)
-		if err = rm.removePolicy(ctx, r, p); err != nil {
+		if err = rm.removePolicy(ctx, desired, p); err != nil {
 			return err
 		}
 	}
@@ -130,7 +128,7 @@ func (rm *resourceManager) getPolicies(
 	var err error
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.getPolicies")
-	defer exit(err)
+	defer func() { exit(err) }()
 
 	input := &svcsdk.ListAttachedRolePoliciesInput{}
 	input.RoleName = r.ko.Spec.Name
@@ -147,7 +145,7 @@ func (rm *resourceManager) getPolicies(
 			return page.IsTruncated != nil && *page.IsTruncated
 		},
 	)
-	rm.metrics.RecordAPICall("GET", "ListAttachedRolePolicies", err)
+	rm.metrics.RecordAPICall("READ_MANY", "ListAttachedRolePolicies", err)
 	return res, err
 }
 
@@ -159,7 +157,7 @@ func (rm *resourceManager) addPolicy(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.addPolicy")
-	defer exit(err)
+	defer func() { exit(err) }()
 
 	input := &svcsdk.AttachRolePolicyInput{}
 	input.RoleName = r.ko.Spec.Name
@@ -177,7 +175,7 @@ func (rm *resourceManager) removePolicy(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.removePolicy")
-	defer exit(err)
+	defer func() { exit(err) }()
 
 	input := &svcsdk.DetachRolePolicyInput{}
 	input.RoleName = r.ko.Spec.Name
@@ -208,27 +206,25 @@ func compareTags(
 // in sync with the Role.Spec.Tags
 func (rm *resourceManager) syncTags(
 	ctx context.Context,
-	r *resource,
+	desired *resource,
+	latest *resource,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.syncTags")
-	defer exit(err)
+	defer func() { exit(err) }()
 	toAdd := []*svcapitypes.Tag{}
 	toDelete := []*svcapitypes.Tag{}
 
-	existingTags, err := rm.getTags(ctx, r)
-	if err != nil {
-		return err
-	}
+	existingTags := latest.ko.Spec.Tags
 
-	for _, t := range r.ko.Spec.Tags {
+	for _, t := range desired.ko.Spec.Tags {
 		if !inTags(*t.Key, *t.Value, existingTags) {
 			toAdd = append(toAdd, t)
 		}
 	}
 
 	for _, t := range existingTags {
-		if !inTags(*t.Key, *t.Value, r.ko.Spec.Tags) {
+		if !inTags(*t.Key, *t.Value, desired.ko.Spec.Tags) {
 			toDelete = append(toDelete, t)
 		}
 	}
@@ -237,7 +233,7 @@ func (rm *resourceManager) syncTags(
 		for _, t := range toAdd {
 			rlog.Debug("adding tag to role", "key", *t.Key, "value", *t.Value)
 		}
-		if err = rm.addTags(ctx, r, toAdd); err != nil {
+		if err = rm.addTags(ctx, desired, toAdd); err != nil {
 			return err
 		}
 	}
@@ -245,7 +241,7 @@ func (rm *resourceManager) syncTags(
 		for _, t := range toDelete {
 			rlog.Debug("removing tag from role", "key", *t.Key, "value", *t.Value)
 		}
-		if err = rm.removeTags(ctx, r, toDelete); err != nil {
+		if err = rm.removeTags(ctx, desired, toDelete); err != nil {
 			return err
 		}
 	}
@@ -280,7 +276,7 @@ func (rm *resourceManager) getTags(
 	var resp *svcsdk.ListRoleTagsOutput
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.getTags")
-	defer exit(err)
+	defer func() { exit(err) }()
 
 	input := &svcsdk.ListRoleTagsInput{}
 	input.RoleName = r.ko.Spec.Name
@@ -298,7 +294,7 @@ func (rm *resourceManager) getTags(
 			break
 		}
 	}
-	rm.metrics.RecordAPICall("GET", "ListRoleTags", err)
+	rm.metrics.RecordAPICall("READ_MANY", "ListRoleTags", err)
 	return res, err
 }
 
@@ -310,7 +306,7 @@ func (rm *resourceManager) addTags(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.addTag")
-	defer exit(err)
+	defer func() { exit(err) }()
 
 	input := &svcsdk.TagRoleInput{}
 	input.RoleName = r.ko.Spec.Name
@@ -321,7 +317,7 @@ func (rm *resourceManager) addTags(
 	input.Tags = inTags
 
 	_, err = rm.sdkapi.TagRoleWithContext(ctx, input)
-	rm.metrics.RecordAPICall("CREATE", "TagRole", err)
+	rm.metrics.RecordAPICall("UPDATE", "TagRole", err)
 	return err
 }
 
@@ -333,7 +329,7 @@ func (rm *resourceManager) removeTags(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.removeTag")
-	defer exit(err)
+	defer func() { exit(err) }()
 
 	input := &svcsdk.UntagRoleInput{}
 	input.RoleName = r.ko.Spec.Name
@@ -344,7 +340,7 @@ func (rm *resourceManager) removeTags(
 	input.TagKeys = inTagKeys
 
 	_, err = rm.sdkapi.UntagRoleWithContext(ctx, input)
-	rm.metrics.RecordAPICall("DELETE", "UntagRole", err)
+	rm.metrics.RecordAPICall("UPDATE", "UntagRole", err)
 	return err
 }
 

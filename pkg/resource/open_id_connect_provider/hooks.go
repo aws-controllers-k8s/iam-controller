@@ -151,9 +151,9 @@ func customPreCompare(
 		// however, when stored in the IAM backend, the "https://" prefix is stripped out
 		// thus here we treat "https://" as a null token for the purposes of string comparison
 		if *a.ko.Spec.URL != *b.ko.Spec.URL {
-			a_url := strings.TrimPrefix(*a.ko.Spec.URL, "https://")
-			b_url := strings.TrimPrefix(*b.ko.Spec.URL, "https://")
-			if a_url != b_url {
+			aURL := strings.TrimPrefix(*a.ko.Spec.URL, "https://")
+			bURL := strings.TrimPrefix(*b.ko.Spec.URL, "https://")
+			if aURL != bURL {
 				delta.Add("Spec.URL", a.ko.Spec.URL, b.ko.Spec.URL)
 			}
 		}
@@ -169,7 +169,7 @@ func (rm *resourceManager) syncTags(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.syncTags")
-	defer func() { exit(err) }()
+	defer func(err error) { exit(err) }(err)
 	toAdd := []*svcapitypes.Tag{}
 	toDelete := []*svcapitypes.Tag{}
 
@@ -228,7 +228,7 @@ func inTags(
 	return false
 }
 
-// getTags returns the list of tags to the OpenIDConnectProvider
+// getTags returns the list of tags attached to the OpenIDConnectProvider
 func (rm *resourceManager) getTags(
 	ctx context.Context,
 	r *resource,
@@ -254,8 +254,9 @@ func (rm *resourceManager) getTags(
 		if resp.IsTruncated != nil && !*resp.IsTruncated {
 			break
 		}
+		input.SetMarker(*resp.Marker)
+		rm.metrics.RecordAPICall("READ_MANY", "ListOpenIDConnectProviderTags", err)
 	}
-	rm.metrics.RecordAPICall("GET", "ListOpenIDConnectProviderTags", err)
 	return res, err
 }
 
@@ -266,7 +267,7 @@ func (rm *resourceManager) addTags(
 	tags []*svcapitypes.Tag,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
-	exit := rlog.Trace("rm.addTag")
+	exit := rlog.Trace("rm.addTags")
 	defer func() { exit(err) }()
 
 	input := &svcsdk.TagOpenIDConnectProviderInput{}
@@ -289,7 +290,7 @@ func (rm *resourceManager) removeTags(
 	tags []*svcapitypes.Tag,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
-	exit := rlog.Trace("rm.removeTag")
+	exit := rlog.Trace("rm.removeTags")
 	defer func() { exit(err) }()
 
 	input := &svcsdk.UntagOpenIDConnectProviderInput{}

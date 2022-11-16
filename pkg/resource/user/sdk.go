@@ -262,10 +262,12 @@ func (rm *resourceManager) sdkCreate(
 	}
 
 	rm.setStatusDefaults(ko)
-	if err := rm.syncPolicies(ctx, &resource{ko}); err != nil {
+	// This causes syncPolicies to create all associated policies to the user
+	userCpy := ko.DeepCopy()
+	userCpy.Spec.Policies = nil
+	if err := rm.syncPolicies(ctx, desired, &resource{ko: userCpy}); err != nil {
 		return nil, err
 	}
-
 	return &resource{ko}, nil
 }
 
@@ -317,6 +319,27 @@ func (rm *resourceManager) sdkUpdate(
 	defer func() {
 		exit(err)
 	}()
+	if delta.DifferentAt("Spec.Policies") {
+		err = rm.syncPolicies(ctx, desired, latest)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if delta.DifferentAt("Spec.Tags") {
+		err = rm.syncTags(ctx, desired, latest)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if delta.DifferentAt("Spec.PermissionsBoundary") {
+		err = rm.syncUserPermissionsBoundary(ctx, desired)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.PermissionsBoundary") {
+		return desired, nil
+	}
 	input, err := rm.newUpdateRequestPayload(ctx, desired)
 	if err != nil {
 		return nil, err
@@ -345,22 +368,6 @@ func (rm *resourceManager) sdkUpdate(
 	ko := desired.ko.DeepCopy()
 
 	rm.setStatusDefaults(ko)
-	if delta.DifferentAt("Spec.PermissionsBoundary") {
-		if err := rm.syncUserPermissionsBoundary(ctx, &resource{ko}); err != nil {
-			return nil, err
-		}
-	}
-	if delta.DifferentAt("Spec.Policies") {
-		if err := rm.syncPolicies(ctx, &resource{ko}); err != nil {
-			return nil, err
-		}
-	}
-	if delta.DifferentAt("Spec.Tags") {
-		if err := rm.syncTags(ctx, &resource{ko}); err != nil {
-			return nil, err
-		}
-	}
-
 	return &resource{ko}, nil
 }
 
@@ -389,13 +396,12 @@ func (rm *resourceManager) sdkDelete(
 	defer func() {
 		exit(err)
 	}()
-	// This causes syncPolicies to delete all associated policies from the
-	// user
-	r.ko.Spec.Policies = []*string{}
-	if err := rm.syncPolicies(ctx, r); err != nil {
+	// This causes syncPolicies to delete all associated policies from the user
+	userCpy := r.ko.DeepCopy()
+	userCpy.Spec.Policies = nil
+	if err := rm.syncPolicies(ctx, &resource{ko: userCpy}, r); err != nil {
 		return nil, err
 	}
-
 	input, err := rm.newDeleteRequestPayload(r)
 	if err != nil {
 		return nil, err
