@@ -1,5 +1,4 @@
-	if policies, err := rm.getPolicies(ctx, &resource{ko}); err != nil {
+	ko.Spec.Policies, err = rm.getPolicies(ctx, &resource{ko})
+	if err != nil {
 		return nil, err
-	} else {
-		ko.Spec.Policies = policies
 	}

@@ -171,15 +171,13 @@ func (rm *resourceManager) sdkFind(
 			ko.Spec.AssumeRolePolicyDocument = &doc
 		}
 	}
-	if policies, err := rm.getPolicies(ctx, &resource{ko}); err != nil {
+	ko.Spec.Policies, err = rm.getPolicies(ctx, &resource{ko})
+	if err != nil {
 		return nil, err
-	} else {
-		ko.Spec.Policies = policies
 	}
-	if tags, err := rm.getTags(ctx, &resource{ko}); err != nil {
+	ko.Spec.Tags, err = rm.getTags(ctx, &resource{ko})
+	if err != nil {
 		return nil, err
-	} else {
-		ko.Spec.Tags = tags
 	}
 	return &resource{ko}, nil
 }
@@ -320,13 +318,7 @@ func (rm *resourceManager) sdkCreate(
 			ko.Spec.AssumeRolePolicyDocument = &doc
 		}
 	}
-	if err := rm.syncPolicies(ctx, &resource{ko}); err != nil {
-		return nil, err
-	}
-	// There really isn't a status of a role... it either exists or doesn't. If
-	// we get here, that means the creation was successful and the desired
-	// state of the role matches what we provided...
-	ackcondition.SetSynced(&resource{ko}, corev1.ConditionTrue, nil, nil)
+	ackcondition.SetSynced(&resource{ko}, corev1.ConditionFalse, nil, nil)
 
 	return &resource{ko}, nil
 }
@@ -388,6 +380,27 @@ func (rm *resourceManager) sdkUpdate(
 	defer func() {
 		exit(err)
 	}()
+	if delta.DifferentAt("Spec.Policies") {
+		err = rm.syncPolicies(ctx, desired, latest)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if delta.DifferentAt("Spec.Tags") {
+		err = rm.syncTags(ctx, desired, latest)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if delta.DifferentAt("Spec.PermissionsBoundary") {
+		err = rm.syncRolePermissionsBoundary(ctx, desired)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.PermissionsBoundary") {
+		return desired, nil
+	}
 	input, err := rm.newUpdateRequestPayload(ctx, desired)
 	if err != nil {
 		return nil, err
@@ -405,22 +418,6 @@ func (rm *resourceManager) sdkUpdate(
 	ko := desired.ko.DeepCopy()
 
 	rm.setStatusDefaults(ko)
-	if delta.DifferentAt("Spec.PermissionsBoundary") {
-		if err := rm.syncRolePermissionsBoundary(ctx, &resource{ko}); err != nil {
-			return nil, err
-		}
-	}
-	if err := rm.syncPolicies(ctx, &resource{ko}); err != nil {
-		return nil, err
-	}
-	if err := rm.syncTags(ctx, &resource{ko}); err != nil {
-		return nil, err
-	}
-	// There really isn't a status of a role... it either exists or doesn't. If
-	// we get here, that means the update was successful and the desired state
-	// of the role matches what we provided...
-	ackcondition.SetSynced(&resource{ko}, corev1.ConditionTrue, nil, nil)
-
 	return &resource{ko}, nil
 }
 
@@ -456,11 +453,11 @@ func (rm *resourceManager) sdkDelete(
 		exit(err)
 	}()
 	// This causes syncPolicies to delete all associated policies from the role
-	r.ko.Spec.Policies = []*string{}
-	if err := rm.syncPolicies(ctx, r); err != nil {
+	roleCpy := r.ko.DeepCopy()
+	roleCpy.Spec.Policies = nil
+	if err := rm.syncPolicies(ctx, &resource{ko: roleCpy}, r); err != nil {
 		return nil, err
 	}
-
 	input, err := rm.newDeleteRequestPayload(r)
 	if err != nil {
 		return nil, err

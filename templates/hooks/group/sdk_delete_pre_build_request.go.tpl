@@ -1,6 +1,6 @@
-	// This causes syncPolicies to delete all associated policies from the
-	// group
-	r.ko.Spec.Policies = []*string{}
-	if err := rm.syncPolicies(ctx, r); err != nil {
+	// This causes syncPolicies to delete all associated policies from the group
+	groupCpy := r.ko.DeepCopy()
+	groupCpy.Spec.Policies = nil
+	if err := rm.syncPolicies(ctx, &resource{ko: groupCpy}, r); err != nil {
 		return nil, err
 	}

@@ -27,40 +27,38 @@ import (
 // field, which is a list of strings containing Policy ARNs.
 func (rm *resourceManager) syncPolicies(
 	ctx context.Context,
-	r *resource,
+	desired *resource,
+	latest *resource,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.syncPolicies")
-	defer exit(err)
+	defer func() { exit(err) }()
 	toAdd := []*string{}
 	toDelete := []*string{}
 
-	existingPolicies, err := rm.getPolicies(ctx, r)
-	if err != nil {
-		return err
-	}
+	existingPolicies := latest.ko.Spec.Policies
 
-	for _, p := range r.ko.Spec.Policies {
+	for _, p := range desired.ko.Spec.Policies {
 		if !ackutil.InStringPs(*p, existingPolicies) {
 			toAdd = append(toAdd, p)
 		}
 	}
 
 	for _, p := range existingPolicies {
-		if !ackutil.InStringPs(*p, r.ko.Spec.Policies) {
+		if !ackutil.InStringPs(*p, desired.ko.Spec.Policies) {
 			toDelete = append(toDelete, p)
 		}
 	}
 
 	for _, p := range toAdd {
 		rlog.Debug("adding policy to group", "policy_arn", *p)
-		if err = rm.addPolicy(ctx, r, p); err != nil {
+		if err = rm.addPolicy(ctx, desired, p); err != nil {
 			return err
 		}
 	}
 	for _, p := range toDelete {
 		rlog.Debug("removing policy from group", "policy_arn", *p)
-		if err = rm.removePolicy(ctx, r, p); err != nil {
+		if err = rm.removePolicy(ctx, desired, p); err != nil {
 			return err
 		}
 	}
@@ -76,7 +74,7 @@ func (rm *resourceManager) getPolicies(
 	var err error
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.getPolicies")
-	defer exit(err)
+	defer func() { exit(err) }()
 
 	input := &svcsdk.ListAttachedGroupPoliciesInput{}
 	input.GroupName = r.ko.Spec.Name
@@ -93,7 +91,7 @@ func (rm *resourceManager) getPolicies(
 			return page.IsTruncated != nil && *page.IsTruncated
 		},
 	)
-	rm.metrics.RecordAPICall("GET", "ListAttachedGroupPolicies", err)
+	rm.metrics.RecordAPICall("READ_MANY", "ListAttachedGroupPolicies", err)
 	return res, err
 }
 
@@ -105,13 +103,13 @@ func (rm *resourceManager) addPolicy(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.addPolicy")
-	defer exit(err)
+	defer func() { exit(err) }()
 
 	input := &svcsdk.AttachGroupPolicyInput{}
 	input.GroupName = r.ko.Spec.Name
 	input.PolicyArn = policyARN
 	_, err = rm.sdkapi.AttachGroupPolicyWithContext(ctx, input)
-	rm.metrics.RecordAPICall("CREATE", "AttachGroupPolicy", err)
+	rm.metrics.RecordAPICall("UPDATE", "AttachGroupPolicy", err)
 	return err
 }
 
@@ -123,12 +121,12 @@ func (rm *resourceManager) removePolicy(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.removePolicy")
-	defer exit(err)
+	defer func() { exit(err) }()
 
 	input := &svcsdk.DetachGroupPolicyInput{}
 	input.GroupName = r.ko.Spec.Name
 	input.PolicyArn = policyARN
 	_, err = rm.sdkapi.DetachGroupPolicyWithContext(ctx, input)
-	rm.metrics.RecordAPICall("DELETE", "DetachGroupPolicy", err)
+	rm.metrics.RecordAPICall("UPDATE", "DetachGroupPolicy", err)
 	return err
 }

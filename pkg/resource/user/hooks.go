@@ -80,40 +80,40 @@ func (rm *resourceManager) syncUserPermissionsBoundary(
 // field, which is a list of strings containing Policy ARNs.
 func (rm *resourceManager) syncPolicies(
 	ctx context.Context,
-	r *resource,
+	desired *resource,
+	latest *resource,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.syncPolicies")
-	defer exit(err)
+	defer func() {
+		exit(err)
+	}()
 	toAdd := []*string{}
 	toDelete := []*string{}
 
-	existingPolicies, err := rm.getPolicies(ctx, r)
-	if err != nil {
-		return err
-	}
+	existingPolicies := latest.ko.Spec.Policies
 
-	for _, p := range r.ko.Spec.Policies {
+	for _, p := range desired.ko.Spec.Policies {
 		if !ackutil.InStringPs(*p, existingPolicies) {
 			toAdd = append(toAdd, p)
 		}
 	}
 
 	for _, p := range existingPolicies {
-		if !ackutil.InStringPs(*p, r.ko.Spec.Policies) {
+		if !ackutil.InStringPs(*p, desired.ko.Spec.Policies) {
 			toDelete = append(toDelete, p)
 		}
 	}
 
 	for _, p := range toAdd {
 		rlog.Debug("adding policy to user", "policy_arn", *p)
-		if err = rm.addPolicy(ctx, r, p); err != nil {
+		if err = rm.addPolicy(ctx, desired, p); err != nil {
 			return err
 		}
 	}
 	for _, p := range toDelete {
 		rlog.Debug("removing policy from user", "policy_arn", *p)
-		if err = rm.removePolicy(ctx, r, p); err != nil {
+		if err = rm.removePolicy(ctx, desired, p); err != nil {
 			return err
 		}
 	}
@@ -121,7 +121,7 @@ func (rm *resourceManager) syncPolicies(
 	return nil
 }
 
-// getPolicies returns the list of Policy ARNs currently attached to the Group
+// getPolicies returns the list of Policy ARNs currently attached to the User
 func (rm *resourceManager) getPolicies(
 	ctx context.Context,
 	r *resource,
@@ -148,7 +148,7 @@ func (rm *resourceManager) getPolicies(
 			return page.IsTruncated != nil && *page.IsTruncated
 		},
 	)
-	rm.metrics.RecordAPICall("GET", "ListAttachedUserPolicies", err)
+	rm.metrics.RecordAPICall("READ_MANY", "ListAttachedUserPolicies", err)
 	return res, err
 }
 
@@ -213,7 +213,8 @@ func compareTags(
 // in sync with the User.Spec.Tags
 func (rm *resourceManager) syncTags(
 	ctx context.Context,
-	r *resource,
+	desired *resource,
+	latest *resource,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.syncTags")
@@ -223,19 +224,16 @@ func (rm *resourceManager) syncTags(
 	toAdd := []*svcapitypes.Tag{}
 	toDelete := []*svcapitypes.Tag{}
 
-	existingTags, err := rm.getTags(ctx, r)
-	if err != nil {
-		return err
-	}
+	existingTags := latest.ko.Spec.Tags
 
-	for _, t := range r.ko.Spec.Tags {
+	for _, t := range desired.ko.Spec.Tags {
 		if !inTags(*t.Key, *t.Value, existingTags) {
 			toAdd = append(toAdd, t)
 		}
 	}
 
 	for _, t := range existingTags {
-		if !inTags(*t.Key, *t.Value, r.ko.Spec.Tags) {
+		if !inTags(*t.Key, *t.Value, desired.ko.Spec.Tags) {
 			toDelete = append(toDelete, t)
 		}
 	}
@@ -244,7 +242,7 @@ func (rm *resourceManager) syncTags(
 		for _, t := range toAdd {
 			rlog.Debug("adding tag to user", "key", *t.Key, "value", *t.Value)
 		}
-		if err = rm.addTags(ctx, r, toAdd); err != nil {
+		if err = rm.addTags(ctx, desired, toAdd); err != nil {
 			return err
 		}
 	}
@@ -252,7 +250,7 @@ func (rm *resourceManager) syncTags(
 		for _, t := range toDelete {
 			rlog.Debug("removing tag from user", "key", *t.Key, "value", *t.Value)
 		}
-		if err = rm.removeTags(ctx, r, toDelete); err != nil {
+		if err = rm.removeTags(ctx, desired, toDelete); err != nil {
 			return err
 		}
 	}
@@ -307,7 +305,7 @@ func (rm *resourceManager) getTags(
 			break
 		}
 	}
-	rm.metrics.RecordAPICall("GET", "ListUserTags", err)
+	rm.metrics.RecordAPICall("READ_MANY", "ListUserTags", err)
 	return res, err
 }
 
@@ -319,9 +317,7 @@ func (rm *resourceManager) addTags(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.addTag")
-	defer func() {
-		exit(err)
-	}()
+	defer func() { exit(err) }()
 
 	input := &svcsdk.TagUserInput{}
 	input.UserName = r.ko.Spec.Name

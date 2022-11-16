@@ -48,7 +48,7 @@ func (rm *resourceManager) customUpdatePolicy(
 	rm.setStatusDefaults(ko)
 
 	if delta.DifferentAt("Spec.Tags") {
-		if err := rm.syncTags(ctx, &resource{ko}); err != nil {
+		if err := rm.syncTags(ctx, desired, latest); err != nil {
 			return nil, err
 		}
 	}
@@ -74,29 +74,25 @@ func (rm *resourceManager) customUpdatePolicy(
 // associated Tags  stays in sync with the Policy.Spec.Tags
 func (rm *resourceManager) syncTags(
 	ctx context.Context,
-	r *resource,
+	desired *resource,
+	latest *resource,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.syncTags")
-	defer func(err error) {
-		exit(err)
-	}(err)
+	defer func() { exit(err) }()
 	toAdd := []*svcapitypes.Tag{}
 	toDelete := []*svcapitypes.Tag{}
 
-	existingTags, err := rm.getTags(ctx, r)
-	if err != nil {
-		return err
-	}
+	existingTags := latest.ko.Spec.Tags
 
-	for _, t := range r.ko.Spec.Tags {
+	for _, t := range desired.ko.Spec.Tags {
 		if !inTags(*t.Key, *t.Value, existingTags) {
 			toAdd = append(toAdd, t)
 		}
 	}
 
 	for _, t := range existingTags {
-		if !inTags(*t.Key, *t.Value, r.ko.Spec.Tags) {
+		if !inTags(*t.Key, *t.Value, desired.ko.Spec.Tags) {
 			toDelete = append(toDelete, t)
 		}
 	}
@@ -105,16 +101,15 @@ func (rm *resourceManager) syncTags(
 		for _, t := range toDelete {
 			rlog.Debug("removing tag from policy", "key", *t.Key, "value", *t.Value)
 		}
-		if err = rm.removeTags(ctx, r, toDelete); err != nil {
+		if err = rm.removeTags(ctx, desired, toDelete); err != nil {
 			return err
 		}
 	}
-
 	if len(toAdd) > 0 {
 		for _, t := range toAdd {
 			rlog.Debug("adding tag to policy", "key", *t.Key, "value", *t.Value)
 		}
-		if err = rm.addTags(ctx, r, toAdd); err != nil {
+		if err = rm.addTags(ctx, desired, toAdd); err != nil {
 			return err
 		}
 	}
@@ -165,9 +160,7 @@ func (rm *resourceManager) getTags(
 	var resp *svcsdk.ListPolicyTagsOutput
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.getTags")
-	defer func(err error) {
-		exit(err)
-	}(err)
+	defer func() { exit(err) }()
 
 	input := &svcsdk.ListPolicyTagsInput{}
 	input.PolicyArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
@@ -197,10 +190,8 @@ func (rm *resourceManager) addTags(
 	tags []*svcapitypes.Tag,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
-	exit := rlog.Trace("rm.addTags")
-	defer func(err error) {
-		exit(err)
-	}(err)
+	exit := rlog.Trace("rm.addTag")
+	defer func() { exit(err) }()
 
 	input := &svcsdk.TagPolicyInput{}
 	input.PolicyArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
@@ -222,10 +213,8 @@ func (rm *resourceManager) removeTags(
 	tags []*svcapitypes.Tag,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
-	exit := rlog.Trace("rm.removeTags")
-	defer func(err error) {
-		exit(err)
-	}(err)
+	exit := rlog.Trace("rm.removeTag")
+	defer func() { exit(err) }()
 
 	input := &svcsdk.UntagPolicyInput{}
 	input.PolicyArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
@@ -253,9 +242,7 @@ func (rm *resourceManager) updatePolicyDocument(
 	var err error
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.updatePolicyDocument")
-	defer func(err error) {
-		exit(err)
-	}(err)
+	defer func() { exit(err) }()
 
 	policyARN := (*string)(r.ko.Status.ACKResourceMetadata.ARN)
 
@@ -295,9 +282,7 @@ func (rm *resourceManager) ensureVersionsLimitNotExceeded(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.ensureVersionsLimitNotExceeded")
-	defer func(err error) {
-		exit(err)
-	}(err)
+	defer func() { exit(err) }()
 
 	versions, err := rm.getPolicyVersions(ctx, policyARN)
 	if err != nil {
@@ -340,9 +325,7 @@ func (rm *resourceManager) getPolicyVersion(
 ) (pv *policyVersion, err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.getPolicyVersion")
-	defer func(err error) {
-		exit(err)
-	}(err)
+	defer func() { exit(err) }()
 
 	input := &svcsdk.GetPolicyVersionInput{}
 	input.SetPolicyArn(policyARN)
@@ -386,9 +369,7 @@ func (rm *resourceManager) getPolicyVersions(
 ) (versions []policyVersion, err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.getPolicyVersions")
-	defer func(err error) {
-		exit(err)
-	}(err)
+	defer func() { exit(err) }()
 
 	input := &svcsdk.ListPolicyVersionsInput{}
 	input.SetPolicyArn(policyARN)
@@ -437,9 +418,7 @@ func (rm *resourceManager) deletePolicyVersion(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.deletePolicyVersion")
-	defer func(err error) {
-		exit(err)
-	}(err)
+	defer func() { exit(err) }()
 
 	input := &svcsdk.DeletePolicyVersionInput{}
 	input.SetPolicyArn(policyARN)
@@ -458,9 +437,7 @@ func (rm *resourceManager) deleteNonDefaultPolicyVersions(
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.deleteNonDefaultPolicyVersions")
-	defer func(err error) {
-		exit(err)
-	}(err)
+	defer func() { exit(err) }()
 
 	policyARN := string(*r.ko.Status.ACKResourceMetadata.ARN)
 
