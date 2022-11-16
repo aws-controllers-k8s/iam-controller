@@ -59,6 +59,9 @@ resources:
       # calls to manage the set of PolicyARNs attached to this Group.
       Policies:
         type: "[]*string"
+        references:
+          resource: Policy
+          path: Status.ACKResourceMetadata.ARN
     tags:
       ignore: true
   Policy:
@@ -150,6 +153,9 @@ resources:
       MaxSessionDuration:
         late_initialize: {}
       PermissionsBoundary:
+        references:
+          resource: Policy
+          path: Status.ACKResourceMetadata.ARN
         set:
           # The input and output shapes are different...
           - from: PermissionsBoundary.PermissionsBoundaryArn
@@ -160,6 +166,9 @@ resources:
       # calls to manage the set of PolicyARNs attached to this Role.
       Policies:
         type: "[]*string"
+        references:
+          resource: Policy
+          path: Status.ACKResourceMetadata.ARN
       Tags:
         compare:
           is_ignored: true
@@ -228,6 +237,9 @@ resources:
       Path:
         late_initialize: {}
       PermissionsBoundary:
+        references:
+          resource: Policy
+          path: Status.ACKResourceMetadata.ARN
         set:
           # The input and output shapes are different...
           - from: PermissionsBoundary.PermissionsBoundaryArn
@@ -236,6 +248,9 @@ resources:
       # calls to manage the set of PolicyARNs attached to this User.
       Policies:
         type: "[]*string"
+        references:
+          resource: Policy
+          path: Status.ACKResourceMetadata.ARN
       Tags:
         compare:
           is_ignored: true
