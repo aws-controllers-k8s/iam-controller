@@ -18,7 +18,7 @@ description: |-
 
 
   This controller is a component of the [AWS Controller for Kubernetes](https://github.com/aws/aws-controllers-k8s)
-  project. This project is currently in **developer preview**.
+  project.
 
 
   **Pre-Installation Steps**
@@ -29,6 +29,12 @@ samples:
 - kind: Policy
   spec: '{}'
 - kind: Role
+  spec: '{}'
+- kind: Group
+  spec: '{}'
+- kind: OpenIDConnectProvider
+  spec: '{}'
+- kind: User
   spec: '{}'
 maintainers:
 - name: "iam maintainer team"
