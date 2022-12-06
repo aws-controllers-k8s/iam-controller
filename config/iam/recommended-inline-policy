@@ -13,6 +13,7 @@
                 "iam:CreateRole",
                 "iam:DeleteRole",
                 "iam:UpdateRole",
+                "iam:PutRolePermissionsBoundary",
                 "iam:GetUser",
                 "iam:CreateUser",
                 "iam:DeleteUser",
