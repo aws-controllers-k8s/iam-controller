@@ -80,10 +80,10 @@ spec:
                   JSON policy language (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_grammar.html)
                   in the IAM User Guide. \n The regex pattern (http://wikipedia.org/wiki/regex)
                   used to validate this parameter is a string of characters consisting
-                  of the following: \n * Any printable ASCII character ranging from
+                  of the following: \n - Any printable ASCII character ranging from
                   the space character (\\u0020) through the end of the ASCII character
-                  range \n * The printable characters in the Basic Latin and Latin-1
-                  Supplement character set (through \\u00FF) \n * The special characters
+                  range \n - The printable characters in the Basic Latin and Latin-1
+                  Supplement character set (through \\u00FF) \n - The special characters
                   tab (\\u0009), line feed (\\u000A), and carriage return (\\u000D)"
                 type: string
               tags:

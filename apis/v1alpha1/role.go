@@ -25,6 +25,7 @@ import (
 // Contains information about an IAM role. This structure is returned as a response
 // element in several API operations that interact with roles.
 type RoleSpec struct {
+
 	// The trust relationship policy document that grants an entity permission to
 	// assume the role.
 	//
@@ -36,14 +37,14 @@ type RoleSpec struct {
 	// The regex pattern (http://wikipedia.org/wiki/regex) used to validate this
 	// parameter is a string of characters consisting of the following:
 	//
-	//    * Any printable ASCII character ranging from the space character (\u0020)
-	//    through the end of the ASCII character range
+	//   - Any printable ASCII character ranging from the space character (\u0020)
+	//     through the end of the ASCII character range
 	//
-	//    * The printable characters in the Basic Latin and Latin-1 Supplement character
-	//    set (through \u00FF)
+	//   - The printable characters in the Basic Latin and Latin-1 Supplement character
+	//     set (through \u00FF)
 	//
-	//    * The special characters tab (\u0009), line feed (\u000A), and carriage
-	//    return (\u000D)
+	//   - The special characters tab (\u0009), line feed (\u000A), and carriage
+	//     return (\u000D)
 	//
 	// Upon success, the response includes the same trust policy in JSON format.
 	// +kubebuilder:validation:Required
@@ -88,11 +89,10 @@ type RoleSpec struct {
 	Path *string `json:"path,omitempty"`
 	// The ARN of the policy that is used to set the permissions boundary for the
 	// role.
-	PermissionsBoundary    *string                                  `json:"permissionsBoundary,omitempty"`
-	PermissionsBoundaryRef *ackv1alpha1.AWSResourceReferenceWrapper `json:"permissionsBoundaryRef,omitempty"`
-
-	Policies   []*string                                  `json:"policies,omitempty"`
-	PolicyRefs []*ackv1alpha1.AWSResourceReferenceWrapper `json:"policyRefs,omitempty"`
+	PermissionsBoundary    *string                                    `json:"permissionsBoundary,omitempty"`
+	PermissionsBoundaryRef *ackv1alpha1.AWSResourceReferenceWrapper   `json:"permissionsBoundaryRef,omitempty"`
+	Policies               []*string                                  `json:"policies,omitempty"`
+	PolicyRefs             []*ackv1alpha1.AWSResourceReferenceWrapper `json:"policyRefs,omitempty"`
 	// A list of tags that you want to attach to the new role. Each tag consists
 	// of a key name and an associated value. For more information about tagging,
 	// see Tagging IAM resources (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_tags.html)

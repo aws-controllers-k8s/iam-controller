@@ -22,6 +22,7 @@ import (
 
 // OpenIDConnectProviderSpec defines the desired state of OpenIDConnectProvider.
 type OpenIDConnectProviderSpec struct {
+
 	// Provides a list of client IDs, also known as audiences. When a mobile or
 	// web app registers with an OpenID Connect provider, they establish a value
 	// that identifies the application. This is the value that's sent as the client_id

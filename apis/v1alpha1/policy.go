@@ -31,6 +31,7 @@ import (
 // inline policies (https://docs.aws.amazon.com/IAM/latest/UserGuide/policies-managed-vs-inline.html)
 // in the IAM User Guide.
 type PolicySpec struct {
+
 	// A friendly description of the policy.
 	//
 	// Typically used to store information about the permissions defined in the
@@ -83,14 +84,15 @@ type PolicySpec struct {
 	// The regex pattern (http://wikipedia.org/wiki/regex) used to validate this
 	// parameter is a string of characters consisting of the following:
 	//
-	//    * Any printable ASCII character ranging from the space character (\u0020)
-	//    through the end of the ASCII character range
+	//   - Any printable ASCII character ranging from the space character (\u0020)
+	//     through the end of the ASCII character range
 	//
-	//    * The printable characters in the Basic Latin and Latin-1 Supplement character
-	//    set (through \u00FF)
+	//   - The printable characters in the Basic Latin and Latin-1 Supplement character
+	//     set (through \u00FF)
 	//
-	//    * The special characters tab (\u0009), line feed (\u000A), and carriage
-	//    return (\u000D)
+	//   - The special characters tab (\u0009), line feed (\u000A), and carriage
+	//     return (\u000D)
+	//
 	// +kubebuilder:validation:Required
 	PolicyDocument *string `json:"policyDocument"`
 	// A list of tags that you want to attach to the new IAM customer managed policy.
