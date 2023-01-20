@@ -26,12 +26,13 @@ import (
 //
 // This data type is used as a response element in the following operations:
 //
-//    * CreateGroup
+//   - CreateGroup
 //
-//    * GetGroup
+//   - GetGroup
 //
-//    * ListGroups
+//   - ListGroups
 type GroupSpec struct {
+
 	// The name of the group to create. Do not include the path in this value.
 	//
 	// IAM user, group, role, and policy names must be unique within the account.
@@ -52,8 +53,7 @@ type GroupSpec struct {
 	// can contain any ASCII character from the ! (\u0021) through the DEL character
 	// (\u007F), including most punctuation characters, digits, and upper and lowercased
 	// letters.
-	Path *string `json:"path,omitempty"`
-
+	Path       *string                                    `json:"path,omitempty"`
 	Policies   []*string                                  `json:"policies,omitempty"`
 	PolicyRefs []*ackv1alpha1.AWSResourceReferenceWrapper `json:"policyRefs,omitempty"`
 }

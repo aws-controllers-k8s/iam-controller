@@ -26,12 +26,13 @@ import (
 //
 // This data type is used as a response element in the following operations:
 //
-//    * CreateUser
+//   - CreateUser
 //
-//    * GetUser
+//   - GetUser
 //
-//    * ListUsers
+//   - ListUsers
 type UserSpec struct {
+
 	// The name of the user to create.
 	//
 	// IAM user, group, role, and policy names must be unique within the account.
@@ -55,11 +56,10 @@ type UserSpec struct {
 	Path *string `json:"path,omitempty"`
 	// The ARN of the policy that is used to set the permissions boundary for the
 	// user.
-	PermissionsBoundary    *string                                  `json:"permissionsBoundary,omitempty"`
-	PermissionsBoundaryRef *ackv1alpha1.AWSResourceReferenceWrapper `json:"permissionsBoundaryRef,omitempty"`
-
-	Policies   []*string                                  `json:"policies,omitempty"`
-	PolicyRefs []*ackv1alpha1.AWSResourceReferenceWrapper `json:"policyRefs,omitempty"`
+	PermissionsBoundary    *string                                    `json:"permissionsBoundary,omitempty"`
+	PermissionsBoundaryRef *ackv1alpha1.AWSResourceReferenceWrapper   `json:"permissionsBoundaryRef,omitempty"`
+	Policies               []*string                                  `json:"policies,omitempty"`
+	PolicyRefs             []*ackv1alpha1.AWSResourceReferenceWrapper `json:"policyRefs,omitempty"`
 	// A list of tags that you want to attach to the new user. Each tag consists
 	// of a key name and an associated value. For more information about tagging,
 	// see Tagging IAM resources (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_tags.html)

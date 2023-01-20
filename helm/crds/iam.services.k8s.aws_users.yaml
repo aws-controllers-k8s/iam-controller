@@ -35,8 +35,8 @@ spec:
           spec:
             description: "UserSpec defines the desired state of User. \n Contains
               information about an IAM user entity. \n This data type is used as a
-              response element in the following operations: \n * CreateUser \n * GetUser
-              \n * ListUsers"
+              response element in the following operations: \n - CreateUser \n - GetUser
+              \n - ListUsers"
             properties:
               name:
                 description: "The name of the user to create. \n IAM user, group,
