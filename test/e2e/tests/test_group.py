@@ -31,30 +31,47 @@ CHECK_STATUS_WAIT_SECONDS = 10
 MODIFY_WAIT_AFTER_SECONDS = 10
 
 
+@pytest.fixture(scope="module")
+def simple_group():
+    group_name = random_suffix_name("my-simple-group", 24)
+
+    replacements = REPLACEMENT_VALUES.copy()
+    replacements['GROUP_NAME'] = group_name
+
+    resource_data = load_resource(
+        "group_simple",
+        additional_replacements=replacements,
+    )
+
+    ref = k8s.CustomResourceReference(
+        CRD_GROUP, CRD_VERSION, GROUP_RESOURCE_PLURAL,
+        group_name, namespace="default",
+    )
+    k8s.create_custom_resource(ref, resource_data)
+    cr = k8s.wait_resource_consumed_by_controller(ref)
+
+    group.wait_until_exists(group_name)
+
+    assert cr is not None
+    assert k8s.get_resource_exists(ref)
+
+    yield (ref, cr)
+
+    _, deleted = k8s.delete_custom_resource(
+        ref,
+        period_length=DELETE_WAIT_AFTER_SECONDS,
+    )
+    assert deleted
+
+    group.wait_until_deleted(group_name)
+
+
 @service_marker
 @pytest.mark.canary
 class TestGroup:
-    def test_crud(self):
-        group_name = random_suffix_name("my-simple-group", 24)
-        group_desc = "a simple group"
-        max_sess_duration = 3600 # Note: minimum of 3600 seconds...
-
-        replacements = REPLACEMENT_VALUES.copy()
-        replacements['GROUP_NAME'] = group_name
-
-        resource_data = load_resource(
-            "group_simple",
-            additional_replacements=replacements,
-        )
-
-        ref = k8s.CustomResourceReference(
-            CRD_GROUP, CRD_VERSION, GROUP_RESOURCE_PLURAL,
-            group_name, namespace="default",
-        )
-        k8s.create_custom_resource(ref, resource_data)
-        cr = k8s.wait_resource_consumed_by_controller(ref)
-
-        group.wait_until_exists(group_name)
+    def test_crud(self, simple_group):
+        ref, res = simple_group
+        group_name = ref.name
 
         time.sleep(CHECK_STATUS_WAIT_SECONDS)
 
@@ -83,9 +100,3 @@ class TestGroup:
 
         latest_group = group.get(group_name)
         assert latest_group["Path"] == new_path
-
-        k8s.delete_custom_resource(ref)
-
-        time.sleep(DELETE_WAIT_AFTER_SECONDS)
-
-        group.wait_until_deleted(group_name)

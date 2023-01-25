@@ -34,41 +34,59 @@ CHECK_WAIT_AFTER_SECONDS = 10
 MODIFY_WAIT_AFTER_SECONDS = 20
 
 
+@pytest.fixture(scope="module")
+def simple_policy():
+    policy_name = random_suffix_name("my-simple-policy", 24)
+    policy_desc = "a simple policy"
+
+    replacements = REPLACEMENT_VALUES.copy()
+    replacements['POLICY_NAME'] = policy_name
+    replacements['POLICY_DESCRIPTION'] = policy_desc
+
+    resource_data = load_resource(
+        "policy_simple",
+        additional_replacements=replacements,
+    )
+
+    ref = k8s.CustomResourceReference(
+        CRD_GROUP, CRD_VERSION, POLICY_RESOURCE_PLURAL,
+        policy_name, namespace="default",
+    )
+    k8s.create_custom_resource(ref, resource_data)
+    cr = k8s.wait_resource_consumed_by_controller(ref)
+
+    cr = k8s.get_resource(ref)
+    assert cr is not None
+    assert 'status' in cr
+    assert 'ackResourceMetadata' in cr['status']
+    assert 'arn' in cr['status']['ackResourceMetadata']
+    policy_arn = cr['status']['ackResourceMetadata']['arn']
+
+    policy.wait_until_exists(policy_arn)
+
+    assert cr is not None
+    assert k8s.get_resource_exists(ref)
+
+    yield (ref, cr, policy_arn)
+
+    _, deleted = k8s.delete_custom_resource(
+        ref,
+        period_length=DELETE_WAIT_AFTER_SECONDS,
+    )
+    assert deleted
+
+    policy.wait_until_deleted(policy_arn)
+
+
 @service_marker
 @pytest.mark.canary
 class TestPolicy:
-    def test_crud(self):
-        policy_name = random_suffix_name("my-simple-policy", 24)
-        policy_desc = "a simple policy"
-
-        replacements = REPLACEMENT_VALUES.copy()
-        replacements['POLICY_NAME'] = policy_name
-        replacements['POLICY_DESCRIPTION'] = policy_desc
-
-        resource_data = load_resource(
-            "policy_simple",
-            additional_replacements=replacements,
-        )
-
-        ref = k8s.CustomResourceReference(
-            CRD_GROUP, CRD_VERSION, POLICY_RESOURCE_PLURAL,
-            policy_name, namespace="default",
-        )
-        k8s.create_custom_resource(ref, resource_data)
-        cr = k8s.wait_resource_consumed_by_controller(ref)
+    def test_crud(self, simple_policy):
+        ref, res, policy_arn = simple_policy
 
         time.sleep(CHECK_WAIT_AFTER_SECONDS)
 
-        cr = k8s.get_resource(ref)
-        assert cr is not None
-        assert 'status' in cr
-        assert 'ackResourceMetadata' in cr['status']
-        assert 'arn' in cr['status']['ackResourceMetadata']
-        policy_arn = cr['status']['ackResourceMetadata']['arn']
-
         condition.assert_synced(ref)
-
-        policy.wait_until_exists(policy_arn)
 
         # check update code path for tags...
         latest_tags = policy.get_tags(policy_arn)
@@ -175,9 +193,3 @@ class TestPolicy:
         after_pv = policy.get_version(policy_arn, "v2")
         after_doc = after_pv["Document"]
         assert after_doc == new_policy_doc
-
-        k8s.delete_custom_resource(ref)
-
-        time.sleep(DELETE_WAIT_AFTER_SECONDS)
-
-        policy.wait_until_deleted(policy_arn)

@@ -30,36 +30,57 @@ from e2e import tag
 DELETE_WAIT_AFTER_SECONDS = 10
 CHECK_STATUS_WAIT_SECONDS = 10
 MODIFY_WAIT_AFTER_SECONDS = 10
+MAX_SESS_DURATION = 3600 # Note: minimum of 3600 seconds...
+
+
+@pytest.fixture(scope="module")
+def simple_role():
+    role_name = random_suffix_name("my-simple-role", 24)
+    role_desc = "a simple role"
+
+    replacements = REPLACEMENT_VALUES.copy()
+    replacements['ROLE_NAME'] = role_name
+    replacements['ROLE_DESCRIPTION'] = role_desc
+    replacements['MAX_SESSION_DURATION'] = str(MAX_SESS_DURATION)
+
+    resource_data = load_resource(
+        "role_simple",
+        additional_replacements=replacements,
+    )
+
+    ref = k8s.CustomResourceReference(
+        CRD_GROUP, CRD_VERSION, ROLE_RESOURCE_PLURAL,
+        role_name, namespace="default",
+    )
+    k8s.create_custom_resource(ref, resource_data)
+    cr = k8s.wait_resource_consumed_by_controller(ref)
+
+    role.wait_until_exists(role_name)
+
+    assert cr is not None
+    assert k8s.get_resource_exists(ref)
+
+    yield (ref, cr)
+
+    _, deleted = k8s.delete_custom_resource(
+        ref,
+        period_length=DELETE_WAIT_AFTER_SECONDS,
+    )
+    assert deleted
+
+    role.wait_until_deleted(role_name)
 
 
 @service_marker
 @pytest.mark.canary
 class TestRole:
-    def test_crud(self):
-        role_name = random_suffix_name("my-simple-role", 24)
-        role_desc = "a simple role"
-        max_sess_duration = 3600 # Note: minimum of 3600 seconds...
-
-        replacements = REPLACEMENT_VALUES.copy()
-        replacements['ROLE_NAME'] = role_name
-        replacements['ROLE_DESCRIPTION'] = role_desc
-        replacements['MAX_SESSION_DURATION'] = str(max_sess_duration)
-
-        resource_data = load_resource(
-            "role_simple",
-            additional_replacements=replacements,
-        )
-
-        ref = k8s.CustomResourceReference(
-            CRD_GROUP, CRD_VERSION, ROLE_RESOURCE_PLURAL,
-            role_name, namespace="default",
-        )
-        k8s.create_custom_resource(ref, resource_data)
-        cr = k8s.wait_resource_consumed_by_controller(ref)
-
-        role.wait_until_exists(role_name)
+    def test_crud(self, simple_role):
+        ref, res = simple_role
+        role_name = ref.name
 
         time.sleep(CHECK_STATUS_WAIT_SECONDS)
+
+        condition.assert_synced(ref)
 
         # Before we update the Role CR below, let's check to see that the
         # MaxSessionDuration field in the CR is still what we set in the
@@ -68,15 +89,15 @@ class TestRole:
         assert cr is not None
         assert 'spec' in cr
         assert 'maxSessionDuration' in cr['spec']
-        assert cr['spec']['maxSessionDuration'] == max_sess_duration
+        assert cr['spec']['maxSessionDuration'] == MAX_SESS_DURATION
 
         condition.assert_synced(ref)
 
         latest = role.get(role_name)
         assert latest is not None
-        assert latest['MaxSessionDuration'] == max_sess_duration
+        assert latest['MaxSessionDuration'] == MAX_SESS_DURATION
 
-        new_max_sess_duration = max_sess_duration + 100
+        new_max_sess_duration = MAX_SESS_DURATION + 100
 
         # We're now going to modify the MaxSessionDuration field of the Role,
         # wait some time and verify that the IAM server-side resource
@@ -104,7 +125,7 @@ class TestRole:
         }
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
-        
+
         latest_policy_arns = role.get_attached_policy_arns(role_name)
         assert latest_policy_arns == policy_arns
 
@@ -140,9 +161,3 @@ class TestRole:
         ]
         latest_tags = role.get_tags(role_name)
         assert tag.cleaned(latest_tags) == after_update_expected_tags
-
-        k8s.delete_custom_resource(ref)
-
-        time.sleep(DELETE_WAIT_AFTER_SECONDS)
-
-        role.wait_until_deleted(role_name)
