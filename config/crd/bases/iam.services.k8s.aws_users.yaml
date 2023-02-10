@@ -61,9 +61,9 @@ spec:
                   boundary for the user.
                 type: string
               permissionsBoundaryRef:
-                description: 'AWSResourceReferenceWrapper provides a wrapper around
+                description: "AWSResourceReferenceWrapper provides a wrapper around
                   *AWSResourceReference type to provide more user friendly syntax
-                  for references using ''from'' field Ex: APIIDRef: from: name: my-api'
+                  for references using 'from' field Ex: APIIDRef: \n from: name: my-api"
                 properties:
                   from:
                     description: AWSResourceReference provides all the values necessary
@@ -79,10 +79,10 @@ spec:
                 type: array
               policyRefs:
                 items:
-                  description: 'AWSResourceReferenceWrapper provides a wrapper around
+                  description: "AWSResourceReferenceWrapper provides a wrapper around
                     *AWSResourceReference type to provide more user friendly syntax
-                    for references using ''from'' field Ex: APIIDRef: from: name:
-                    my-api'
+                    for references using 'from' field Ex: APIIDRef: \n from: name:
+                    my-api"
                   properties:
                     from:
                       description: AWSResourceReference provides all the values necessary
