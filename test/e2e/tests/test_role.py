@@ -161,3 +161,59 @@ class TestRole:
         ]
         latest_tags = role.get_tags(role_name)
         assert tag.cleaned(latest_tags) == after_update_expected_tags
+
+        # Attempt to add and remove inline policies from the role
+        inline_doc = '''{
+"Version": "2012-10-17",
+"Statement": [{
+"Effect": "Allow",
+"Action": ["ec2:Get*"],
+"Resource": ["*"]
+}]
+}'''
+        updates = {
+            "spec": {
+                "inlinePolicies": {
+                    "ec2get": inline_doc,
+                },
+            },
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        expect_inline_policies = {
+            'ec2get': inline_doc,
+        }
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert 'spec' in cr
+        assert 'inlinePolicies' in cr['spec']
+        assert len(cr['spec']['inlinePolicies']) == 1
+        assert expect_inline_policies == cr['spec']['inlinePolicies']
+
+        latest_inline_policies = role.get_inline_policies(role_name)
+        assert len(latest_inline_policies) == 1
+        assert 'ec2get' in latest_inline_policies
+        got_pol_doc = latest_inline_policies['ec2get']
+        nospace_got_doc = "".join(c for c in got_pol_doc if not c.isspace())
+        nospace_exp_doc = "".join(c for c in inline_doc if not c.isspace())
+
+        assert nospace_exp_doc == nospace_got_doc
+
+        # Remove the inline policy we just added and check the updates are
+        # reflected in the IAM API
+        updates = {
+            "spec": {
+                "inlinePolicies": None,
+            },
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert 'spec' in cr
+        assert 'inlinePolicies' not in cr['spec']
+
+        latest_inline_policies = role.get_inline_policies(role_name)
+        assert len(latest_inline_policies) == 0

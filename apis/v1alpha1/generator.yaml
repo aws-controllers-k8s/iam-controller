@@ -169,6 +169,15 @@ resources:
         references:
           resource: Policy
           path: Status.ACKResourceMetadata.ARN
+      # These are policy documents that are added to the Role using the
+      # Put/DeleteRolePolicy APIs, as compared to the Attach/DetachRolePolicy
+      # APIs that are for non-inline managed policies.
+      #
+      # The map key is the PolicyDocumentName and the map value is the JSON
+      # policy document.
+      InlinePolicies:
+        type: map[string]*string
+        late_initialize: {}
       Tags:
         compare:
           is_ignored: true

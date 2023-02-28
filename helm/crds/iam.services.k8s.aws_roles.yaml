@@ -56,6 +56,10 @@ spec:
               description:
                 description: A description of the role.
                 type: string
+              inlinePolicies:
+                additionalProperties:
+                  type: string
+                type: object
               maxSessionDuration:
                 description: "The maximum session duration (in seconds) that you want
                   to set for the specified role. If you do not specify a value for

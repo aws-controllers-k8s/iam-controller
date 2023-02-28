@@ -14,6 +14,7 @@
 """Utilities for working with Role resources"""
 
 import datetime
+import json
 import time
 
 import boto3
@@ -126,5 +127,25 @@ def get_tags(role_name):
     try:
         resp = c.list_role_tags(RoleName=role_name)
         return resp['Tags']
+    except c.exceptions.NoSuchEntityException:
+        return None
+
+
+def get_inline_policies(role_name):
+    """Returns a dict containing the policy names for inline policies that have
+    been attached to the supplied Role along with the policy document values.
+
+    If no such Role exists, returns None.
+    """
+    c = boto3.client('iam')
+    try:
+        resp = c.list_role_policies(RoleName=role_name)
+        policies = {}
+        for pol_name in resp['PolicyNames']:
+            pol_resp = c.get_role_policy(
+                RoleName=role_name, PolicyName=pol_name,
+            )
+            policies[pol_name] = json.dumps(pol_resp['PolicyDocument'])
+        return policies
     except c.exceptions.NoSuchEntityException:
         return None

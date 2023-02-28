@@ -1472,6 +1472,21 @@ func (in *RoleSpec) DeepCopyInto(out *RoleSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.InlinePolicies != nil {
+		in, out := &in.InlinePolicies, &out.InlinePolicies
+		*out = make(map[string]*string, len(*in))
+		for key, val := range *in {
+			var outVal *string
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				in, out := &val, &outVal
+				*out = new(string)
+				**out = **in
+			}
+			(*out)[key] = outVal
+		}
+	}
 	if in.MaxSessionDuration != nil {
 		in, out := &in.MaxSessionDuration, &out.MaxSessionDuration
 		*out = new(int64)

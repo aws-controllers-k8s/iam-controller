@@ -50,7 +50,8 @@ type RoleSpec struct {
 	// +kubebuilder:validation:Required
 	AssumeRolePolicyDocument *string `json:"assumeRolePolicyDocument"`
 	// A description of the role.
-	Description *string `json:"description,omitempty"`
+	Description    *string            `json:"description,omitempty"`
+	InlinePolicies map[string]*string `json:"inlinePolicies,omitempty"`
 	// The maximum session duration (in seconds) that you want to set for the specified
 	// role. If you do not specify a value for this setting, the default value of
 	// one hour is applied. This setting can have a value from 1 hour to 12 hours.

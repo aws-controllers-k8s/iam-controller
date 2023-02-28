@@ -165,13 +165,17 @@ func (rm *resourceManager) sdkFind(
 
 	rm.setStatusDefaults(ko)
 	if ko.Spec.AssumeRolePolicyDocument != nil {
-		if doc, err := decodeAssumeDocument(*ko.Spec.AssumeRolePolicyDocument); err != nil {
+		if doc, err := decodeDocument(*ko.Spec.AssumeRolePolicyDocument); err != nil {
 			return nil, err
 		} else {
 			ko.Spec.AssumeRolePolicyDocument = &doc
 		}
 	}
-	ko.Spec.Policies, err = rm.getPolicies(ctx, &resource{ko})
+	ko.Spec.Policies, err = rm.getManagedPolicies(ctx, &resource{ko})
+	if err != nil {
+		return nil, err
+	}
+	ko.Spec.InlinePolicies, err = rm.getInlinePolicies(ctx, &resource{ko})
 	if err != nil {
 		return nil, err
 	}
@@ -179,6 +183,7 @@ func (rm *resourceManager) sdkFind(
 	if err != nil {
 		return nil, err
 	}
+
 	return &resource{ko}, nil
 }
 
@@ -312,7 +317,7 @@ func (rm *resourceManager) sdkCreate(
 
 	rm.setStatusDefaults(ko)
 	if ko.Spec.AssumeRolePolicyDocument != nil {
-		if doc, err := decodeAssumeDocument(*ko.Spec.AssumeRolePolicyDocument); err != nil {
+		if doc, err := decodeDocument(*ko.Spec.AssumeRolePolicyDocument); err != nil {
 			return nil, err
 		} else {
 			ko.Spec.AssumeRolePolicyDocument = &doc
@@ -381,7 +386,13 @@ func (rm *resourceManager) sdkUpdate(
 		exit(err)
 	}()
 	if delta.DifferentAt("Spec.Policies") {
-		err = rm.syncPolicies(ctx, desired, latest)
+		err = rm.syncManagedPolicies(ctx, desired, latest)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if delta.DifferentAt("Spec.InlinePolicies") {
+		err = rm.syncInlinePolicies(ctx, desired, latest)
 		if err != nil {
 			return nil, err
 		}
@@ -398,9 +409,10 @@ func (rm *resourceManager) sdkUpdate(
 			return nil, err
 		}
 	}
-	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.PermissionsBoundary") {
+	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.InlinePolicies", "Spec.PermissionsBoundary") {
 		return desired, nil
 	}
+
 	input, err := rm.newUpdateRequestPayload(ctx, desired)
 	if err != nil {
 		return nil, err
@@ -452,12 +464,17 @@ func (rm *resourceManager) sdkDelete(
 	defer func() {
 		exit(err)
 	}()
-	// This causes syncPolicies to delete all associated policies from the role
+	// This deletes all associated managed and inline policies from the role
 	roleCpy := r.ko.DeepCopy()
 	roleCpy.Spec.Policies = nil
-	if err := rm.syncPolicies(ctx, &resource{ko: roleCpy}, r); err != nil {
+	if err := rm.syncManagedPolicies(ctx, &resource{ko: roleCpy}, r); err != nil {
 		return nil, err
 	}
+	roleCpy.Spec.InlinePolicies = map[string]*string{}
+	if err := rm.syncInlinePolicies(ctx, &resource{ko: roleCpy}, r); err != nil {
+		return nil, err
+	}
+
 	input, err := rm.newDeleteRequestPayload(r)
 	if err != nil {
 		return nil, err

@@ -58,6 +58,13 @@ func newResourceDelta(
 			delta.Add("Spec.Description", a.ko.Spec.Description, b.ko.Spec.Description)
 		}
 	}
+	if ackcompare.HasNilDifference(a.ko.Spec.InlinePolicies, b.ko.Spec.InlinePolicies) {
+		delta.Add("Spec.InlinePolicies", a.ko.Spec.InlinePolicies, b.ko.Spec.InlinePolicies)
+	} else if a.ko.Spec.InlinePolicies != nil && b.ko.Spec.InlinePolicies != nil {
+		if !ackcompare.MapStringStringPEqual(a.ko.Spec.InlinePolicies, b.ko.Spec.InlinePolicies) {
+			delta.Add("Spec.InlinePolicies", a.ko.Spec.InlinePolicies, b.ko.Spec.InlinePolicies)
+		}
+	}
 	if ackcompare.HasNilDifference(a.ko.Spec.MaxSessionDuration, b.ko.Spec.MaxSessionDuration) {
 		delta.Add("Spec.MaxSessionDuration", a.ko.Spec.MaxSessionDuration, b.ko.Spec.MaxSessionDuration)
 	} else if a.ko.Spec.MaxSessionDuration != nil && b.ko.Spec.MaxSessionDuration != nil {

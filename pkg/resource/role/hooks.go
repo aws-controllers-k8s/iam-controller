@@ -21,6 +21,7 @@ import (
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
 	ackutil "github.com/aws-controllers-k8s/runtime/pkg/util"
 	svcsdk "github.com/aws/aws-sdk-go/service/iam"
+	"github.com/samber/lo"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
 	commonutil "github.com/aws-controllers-k8s/iam-controller/pkg/util"
@@ -75,17 +76,17 @@ func (rm *resourceManager) syncRolePermissionsBoundary(
 	return rm.putRolePermissionsBoundary(ctx, r)
 }
 
-// syncPolicies examines the PolicyARNs in the supplied Role and calls the
-// ListRolePolicies, AttachRolePolicy and DetachRolePolicy APIs to ensure that
-// the set of attached policies stays in sync with the Role.Spec.Policies
-// field, which is a list of strings containing Policy ARNs.
-func (rm *resourceManager) syncPolicies(
+// syncManagedPolicies examines the PolicyARNs in the supplied Role and calls
+// the ListAttachedRolePolicies, AttachRolePolicy and DetachRolePolicy APIs to
+// ensure that the set of attached managed policies stays in sync with the
+// Role.Spec.Policies field, which is a list of strings containing Policy ARNs.
+func (rm *resourceManager) syncManagedPolicies(
 	ctx context.Context,
 	desired *resource,
 	latest *resource,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
-	exit := rlog.Trace("rm.syncPolicies")
+	exit := rlog.Trace("rm.syncManagedPolicies")
 	defer func() { exit(err) }()
 	toAdd := []*string{}
 	toDelete := []*string{}
@@ -105,14 +106,14 @@ func (rm *resourceManager) syncPolicies(
 	}
 
 	for _, p := range toAdd {
-		rlog.Debug("adding policy to role", "policy_arn", *p)
-		if err = rm.addPolicy(ctx, desired, p); err != nil {
+		rlog.Debug("adding managed policy to role", "policy_arn", *p)
+		if err = rm.addManagedPolicy(ctx, desired, p); err != nil {
 			return err
 		}
 	}
 	for _, p := range toDelete {
-		rlog.Debug("removing policy from role", "policy_arn", *p)
-		if err = rm.removePolicy(ctx, desired, p); err != nil {
+		rlog.Debug("removing managed policy from role", "policy_arn", *p)
+		if err = rm.removeManagedPolicy(ctx, desired, p); err != nil {
 			return err
 		}
 	}
@@ -120,14 +121,15 @@ func (rm *resourceManager) syncPolicies(
 	return nil
 }
 
-// getPolicies returns the list of Policy ARNs currently attached to the Role
-func (rm *resourceManager) getPolicies(
+// getManagedPolicies returns the list of Policy ARNs currently attached to the
+// Role
+func (rm *resourceManager) getManagedPolicies(
 	ctx context.Context,
 	r *resource,
 ) ([]*string, error) {
 	var err error
 	rlog := ackrtlog.FromContext(ctx)
-	exit := rlog.Trace("rm.getPolicies")
+	exit := rlog.Trace("rm.getManagedPolicies")
 	defer func() { exit(err) }()
 
 	input := &svcsdk.ListAttachedRolePoliciesInput{}
@@ -149,39 +151,190 @@ func (rm *resourceManager) getPolicies(
 	return res, err
 }
 
-// addPolicy adds the supplied Policy to the supplied Role resource
-func (rm *resourceManager) addPolicy(
+// addManagedPolicy adds the supplied managed Policy to the supplied Role
+// resource
+func (rm *resourceManager) addManagedPolicy(
 	ctx context.Context,
 	r *resource,
 	policyARN *string,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
-	exit := rlog.Trace("rm.addPolicy")
+	exit := rlog.Trace("rm.addManagedPolicy")
 	defer func() { exit(err) }()
 
 	input := &svcsdk.AttachRolePolicyInput{}
 	input.RoleName = r.ko.Spec.Name
 	input.PolicyArn = policyARN
 	_, err = rm.sdkapi.AttachRolePolicyWithContext(ctx, input)
-	rm.metrics.RecordAPICall("CREATE", "AttachRolePolicy", err)
+	rm.metrics.RecordAPICall("UPDATE", "AttachRolePolicy", err)
 	return err
 }
 
-// removePolicy removes the supplied Policy from the supplied Role resource
-func (rm *resourceManager) removePolicy(
+// removeManagedPolicy removes the supplied managed Policy from the supplied
+// Role resource
+func (rm *resourceManager) removeManagedPolicy(
 	ctx context.Context,
 	r *resource,
 	policyARN *string,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
-	exit := rlog.Trace("rm.removePolicy")
+	exit := rlog.Trace("rm.removeManagedPolicy")
 	defer func() { exit(err) }()
 
 	input := &svcsdk.DetachRolePolicyInput{}
 	input.RoleName = r.ko.Spec.Name
 	input.PolicyArn = policyARN
 	_, err = rm.sdkapi.DetachRolePolicyWithContext(ctx, input)
-	rm.metrics.RecordAPICall("DELETE", "DetachRolePolicy", err)
+	rm.metrics.RecordAPICall("UPDATE", "DetachRolePolicy", err)
+	return err
+}
+
+// syncInlinePolicies examines the InlinePolicies in the supplied Role and
+// calls the ListRolePolicies, PutRolePolicy and DeleteRolePolicy APIs to
+// ensure that the set of attached policies stays in sync with the
+// Role.Spec.InlinePolicies field, which is a map of policy names to policy
+// documents.
+func (rm *resourceManager) syncInlinePolicies(
+	ctx context.Context,
+	desired *resource,
+	latest *resource,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.syncInlinePolicies")
+	defer func() { exit(err) }()
+
+	existingPolicies := latest.ko.Spec.InlinePolicies
+
+	existingPairs := lo.ToPairs(existingPolicies)
+	desiredPairs := lo.ToPairs(desired.ko.Spec.InlinePolicies)
+
+	toDelete, toAdd := lo.Difference(existingPairs, desiredPairs)
+
+	for _, pair := range toAdd {
+		polName := pair.Key
+		polDoc := pair.Value
+		rlog.Debug(
+			"adding inline policy to role",
+			"policy_name", polName,
+		)
+		err = rm.addInlinePolicy(ctx, desired, polName, polDoc)
+		if err != nil {
+			return err
+		}
+	}
+	for _, pair := range toDelete {
+		polName := pair.Key
+		rlog.Debug(
+			"removing inline policy from role",
+			"policy_name", polName,
+		)
+		if err = rm.removeInlinePolicy(ctx, desired, polName); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// getInlinePolicies returns a map of inline policy name and policy docs
+// currently attached to the Role.
+//
+// NOTE(jaypipes): There's no way around the inefficiencies of this method
+// without caching stuff, and I don't think it's useful to have an unbounded
+// cache for these inline policy documents :( IAM's ListRolePolicies API call
+// only returns the *policy names* of inline policies. You need to call
+// GetRolePolicy API call for each inline policy name in order to get the
+// policy document. Yes, they force an O(N) time complexity for this
+// operation...
+func (rm *resourceManager) getInlinePolicies(
+	ctx context.Context,
+	r *resource,
+) (map[string]*string, error) {
+	var err error
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.getInlinePolicies")
+	defer func() { exit(err) }()
+
+	roleName := r.ko.Spec.Name
+
+	input := &svcsdk.ListRolePoliciesInput{}
+	input.RoleName = roleName
+	res := map[string]*string{}
+
+	err = rm.sdkapi.ListRolePoliciesPagesWithContext(
+		ctx, input, func(page *svcsdk.ListRolePoliciesOutput, _ bool) bool {
+			if page == nil {
+				return true
+			}
+			for _, p := range page.PolicyNames {
+				res[*p] = nil
+			}
+			return page.IsTruncated != nil && *page.IsTruncated
+		},
+	)
+	rm.metrics.RecordAPICall("READ_MANY", "ListRolePolicies", err)
+
+	// Now we need to grab the policy documents for each policy name
+	for polName, _ := range res {
+		input := &svcsdk.GetRolePolicyInput{}
+		input.RoleName = roleName
+		input.PolicyName = &polName
+		resp, err := rm.sdkapi.GetRolePolicyWithContext(ctx, input)
+		rm.metrics.RecordAPICall("READ_ONE", "GetRolePolicy", err)
+		if err != nil {
+			return nil, err
+		}
+		cleanedDoc, err := decodeDocument(*resp.PolicyDocument)
+		if err != nil {
+			return nil, err
+		}
+		res[polName] = &cleanedDoc
+
+	}
+	return res, nil
+}
+
+// addInlinePolicy adds the supplied inline Policy to the supplied Role
+// resource
+func (rm *resourceManager) addInlinePolicy(
+	ctx context.Context,
+	r *resource,
+	policyName string,
+	policyDoc *string,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.addInlinePolicy")
+	defer func() { exit(err) }()
+
+	input := &svcsdk.PutRolePolicyInput{}
+	input.RoleName = r.ko.Spec.Name
+	input.PolicyName = &policyName
+	cleanedDoc, err := decodeDocument(*policyDoc)
+	if err != nil {
+		return err
+	}
+	input.PolicyDocument = &cleanedDoc
+	_, err = rm.sdkapi.PutRolePolicyWithContext(ctx, input)
+	rm.metrics.RecordAPICall("UPDATE", "PutRolePolicy", err)
+	return err
+}
+
+// removeInlinePolicy removes the supplied inline Policy from the supplied Role
+// resource
+func (rm *resourceManager) removeInlinePolicy(
+	ctx context.Context,
+	r *resource,
+	policyName string,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.removeInlinePolicy")
+	defer func() { exit(err) }()
+
+	input := &svcsdk.DeleteRolePolicyInput{}
+	input.RoleName = r.ko.Spec.Name
+	input.PolicyName = &policyName
+	_, err = rm.sdkapi.DeleteRolePolicyWithContext(ctx, input)
+	rm.metrics.RecordAPICall("UPDATE", "DeleteRolePolicy", err)
 	return err
 }
 
@@ -344,6 +497,6 @@ func (rm *resourceManager) removeTags(
 	return err
 }
 
-func decodeAssumeDocument(encoded string) (string, error) {
+func decodeDocument(encoded string) (string, error) {
 	return url.QueryUnescape(encoded)
 }
