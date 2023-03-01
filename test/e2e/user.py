@@ -14,6 +14,7 @@
 """Utilities for working with User resources"""
 
 import datetime
+import json
 import time
 
 import boto3
@@ -126,5 +127,25 @@ def get_tags(user_name):
     try:
         resp = c.list_user_tags(UserName=user_name)
         return resp['Tags']
+    except c.exceptions.NoSuchEntityException:
+        return None
+
+
+def get_inline_policies(user_name):
+    """Returns a dict containing the policy names for inline policies that have
+    been attached to the supplied User along with the policy document values.
+
+    If no such User exists, returns None.
+    """
+    c = boto3.client('iam')
+    try:
+        resp = c.list_user_policies(UserName=user_name)
+        policies = {}
+        for pol_name in resp['PolicyNames']:
+            pol_resp = c.get_user_policy(
+                UserName=user_name, PolicyName=pol_name,
+            )
+            policies[pol_name] = json.dumps(pol_resp['PolicyDocument'])
+        return policies
     except c.exceptions.NoSuchEntityException:
         return None
