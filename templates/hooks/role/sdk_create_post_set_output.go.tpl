@@ -1,5 +1,5 @@
     if ko.Spec.AssumeRolePolicyDocument != nil {
-		if doc, err := decodeAssumeDocument(*ko.Spec.AssumeRolePolicyDocument); err != nil {
+		if doc, err := decodeDocument(*ko.Spec.AssumeRolePolicyDocument); err != nil {
 			return nil, err
 		} else {
 			ko.Spec.AssumeRolePolicyDocument = &doc
