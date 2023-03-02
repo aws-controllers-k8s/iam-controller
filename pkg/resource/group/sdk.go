@@ -116,10 +116,15 @@ func (rm *resourceManager) sdkFind(
 	}
 
 	rm.setStatusDefaults(ko)
-	ko.Spec.Policies, err = rm.getPolicies(ctx, &resource{ko})
+	ko.Spec.Policies, err = rm.getManagedPolicies(ctx, &resource{ko})
 	if err != nil {
 		return nil, err
 	}
+	ko.Spec.InlinePolicies, err = rm.getInlinePolicies(ctx, &resource{ko})
+	if err != nil {
+		return nil, err
+	}
+
 	return &resource{ko}, nil
 }
 
@@ -204,12 +209,10 @@ func (rm *resourceManager) sdkCreate(
 	}
 
 	rm.setStatusDefaults(ko)
-	// This causes syncPolicies to create all associated policies to the group
-	groupCpy := ko.DeepCopy()
-	groupCpy.Spec.Policies = nil
-	if err := rm.syncPolicies(ctx, desired, &resource{ko: groupCpy}); err != nil {
-		return nil, err
-	}
+	// This causes a requeue and policies/tags will be synced on the next
+	// reconciliation loop
+	ackcondition.SetSynced(&resource{ko}, corev1.ConditionFalse, nil, nil)
+
 	return &resource{ko}, nil
 }
 
@@ -245,14 +248,21 @@ func (rm *resourceManager) sdkUpdate(
 		exit(err)
 	}()
 	if delta.DifferentAt("Spec.Policies") {
-		err = rm.syncPolicies(ctx, desired, latest)
+		err = rm.syncManagedPolicies(ctx, desired, latest)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.PermissionsBoundary") {
+	if delta.DifferentAt("Spec.InlinePolicies") {
+		err = rm.syncInlinePolicies(ctx, desired, latest)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.InlinePolicies", "Spec.PermissionsBoundary") {
 		return desired, nil
 	}
+
 	input, err := rm.newUpdateRequestPayload(ctx, desired)
 	if err != nil {
 		return nil, err
@@ -309,12 +319,17 @@ func (rm *resourceManager) sdkDelete(
 	defer func() {
 		exit(err)
 	}()
-	// This causes syncPolicies to delete all associated policies from the group
+	// This deletes all associated managed and inline policies from the user
 	groupCpy := r.ko.DeepCopy()
 	groupCpy.Spec.Policies = nil
-	if err := rm.syncPolicies(ctx, &resource{ko: groupCpy}, r); err != nil {
+	if err := rm.syncManagedPolicies(ctx, &resource{ko: groupCpy}, r); err != nil {
 		return nil, err
 	}
+	groupCpy.Spec.InlinePolicies = map[string]*string{}
+	if err := rm.syncInlinePolicies(ctx, &resource{ko: groupCpy}, r); err != nil {
+		return nil, err
+	}
+
 	input, err := rm.newDeleteRequestPayload(r)
 	if err != nil {
 		return nil, err

@@ -38,6 +38,10 @@ spec:
               a response element in the following operations: \n - CreateGroup \n
               - GetGroup \n - ListGroups"
             properties:
+              inlinePolicies:
+                additionalProperties:
+                  type: string
+                type: object
               name:
                 description: "The name of the group to create. Do not include the
                   path in this value. \n IAM user, group, role, and policy names must
