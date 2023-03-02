@@ -32,7 +32,7 @@ import (
 //
 //   - ListUsers
 type UserSpec struct {
-
+	InlinePolicies map[string]*string `json:"inlinePolicies,omitempty"`
 	// The name of the user to create.
 	//
 	// IAM user, group, role, and policy names must be unique within the account.

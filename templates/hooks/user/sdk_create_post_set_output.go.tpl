@@ -1,6 +1,3 @@
-	// This causes syncPolicies to create all associated policies to the user
-	userCpy := ko.DeepCopy()
-	userCpy.Spec.Policies = nil
-	if err := rm.syncPolicies(ctx, desired, &resource{ko: userCpy}); err != nil {
-		return nil, err
-	}
+    // This causes a requeue and policies/tags will be synced on the next
+    // reconciliation loop
+    ackcondition.SetSynced(&resource{ko}, corev1.ConditionFalse, nil, nil)

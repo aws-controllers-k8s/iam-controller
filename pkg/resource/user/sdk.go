@@ -142,10 +142,14 @@ func (rm *resourceManager) sdkFind(
 	}
 
 	rm.setStatusDefaults(ko)
-	if policies, err := rm.getPolicies(ctx, &resource{ko}); err != nil {
+	if policies, err := rm.getManagedPolicies(ctx, &resource{ko}); err != nil {
 		return nil, err
 	} else {
 		ko.Spec.Policies = policies
+	}
+	ko.Spec.InlinePolicies, err = rm.getInlinePolicies(ctx, &resource{ko})
+	if err != nil {
+		return nil, err
 	}
 	if tags, err := rm.getTags(ctx, &resource{ko}); err != nil {
 		return nil, err
@@ -262,12 +266,10 @@ func (rm *resourceManager) sdkCreate(
 	}
 
 	rm.setStatusDefaults(ko)
-	// This causes syncPolicies to create all associated policies to the user
-	userCpy := ko.DeepCopy()
-	userCpy.Spec.Policies = nil
-	if err := rm.syncPolicies(ctx, desired, &resource{ko: userCpy}); err != nil {
-		return nil, err
-	}
+	// This causes a requeue and policies/tags will be synced on the next
+	// reconciliation loop
+	ackcondition.SetSynced(&resource{ko}, corev1.ConditionFalse, nil, nil)
+
 	return &resource{ko}, nil
 }
 
@@ -320,7 +322,13 @@ func (rm *resourceManager) sdkUpdate(
 		exit(err)
 	}()
 	if delta.DifferentAt("Spec.Policies") {
-		err = rm.syncPolicies(ctx, desired, latest)
+		err = rm.syncManagedPolicies(ctx, desired, latest)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if delta.DifferentAt("Spec.InlinePolicies") {
+		err = rm.syncInlinePolicies(ctx, desired, latest)
 		if err != nil {
 			return nil, err
 		}
@@ -337,9 +345,10 @@ func (rm *resourceManager) sdkUpdate(
 			return nil, err
 		}
 	}
-	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.PermissionsBoundary") {
+	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.InlinePolicies", "Spec.PermissionsBoundary") {
 		return desired, nil
 	}
+
 	input, err := rm.newUpdateRequestPayload(ctx, desired)
 	if err != nil {
 		return nil, err
@@ -396,12 +405,17 @@ func (rm *resourceManager) sdkDelete(
 	defer func() {
 		exit(err)
 	}()
-	// This causes syncPolicies to delete all associated policies from the user
+	// This deletes all associated managed and inline policies from the user
 	userCpy := r.ko.DeepCopy()
 	userCpy.Spec.Policies = nil
-	if err := rm.syncPolicies(ctx, &resource{ko: userCpy}, r); err != nil {
+	if err := rm.syncManagedPolicies(ctx, &resource{ko: userCpy}, r); err != nil {
 		return nil, err
 	}
+	userCpy.Spec.InlinePolicies = map[string]*string{}
+	if err := rm.syncInlinePolicies(ctx, &resource{ko: userCpy}, r); err != nil {
+		return nil, err
+	}
+
 	input, err := rm.newDeleteRequestPayload(r)
 	if err != nil {
 		return nil, err
