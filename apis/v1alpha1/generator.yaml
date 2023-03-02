@@ -62,6 +62,14 @@ resources:
         references:
           resource: Policy
           path: Status.ACKResourceMetadata.ARN
+      # These are policy documents that are added to the Group using the
+      # Put/DeleteGroupPolicy APIs, as compared to the Attach/DetachGroupPolicy
+      # APIs that are for non-inline managed policies.
+      #
+      # The map key is the PolicyDocumentName and the map value is the JSON
+      # policy document.
+      InlinePolicies:
+        type: map[string]*string
     tags:
       ignore: true
   Policy:

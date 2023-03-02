@@ -32,7 +32,7 @@ import (
 //
 //   - ListGroups
 type GroupSpec struct {
-
+	InlinePolicies map[string]*string `json:"inlinePolicies,omitempty"`
 	// The name of the group to create. Do not include the path in this value.
 	//
 	// IAM user, group, role, and policy names must be unique within the account.

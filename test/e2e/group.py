@@ -14,6 +14,7 @@
 """Utilities for working with Group resources"""
 
 import datetime
+import json
 import time
 
 import boto3
@@ -112,5 +113,25 @@ def get_attached_policy_arns(group_name):
     try:
         resp = c.list_attached_group_policies(GroupName=group_name)
         return [p['PolicyArn'] for p in resp['AttachedPolicies']]
+    except c.exceptions.NoSuchEntityException:
+        return None
+
+
+def get_inline_policies(group_name):
+    """Returns a dict containing the policy names for inline policies that have
+    been attached to the supplied Group along with the policy document values.
+
+    If no such Group exists, returns None.
+    """
+    c = boto3.client('iam')
+    try:
+        resp = c.list_group_policies(GroupName=group_name)
+        policies = {}
+        for pol_name in resp['PolicyNames']:
+            pol_resp = c.get_group_policy(
+                GroupName=group_name, PolicyName=pol_name,
+            )
+            policies[pol_name] = json.dumps(pol_resp['PolicyDocument'])
+        return policies
     except c.exceptions.NoSuchEntityException:
         return None
