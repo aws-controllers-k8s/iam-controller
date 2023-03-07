@@ -1,8 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-bases:
-  - common
 resources:
+  - common
   - bases/iam.services.k8s.aws_groups.yaml
   - bases/iam.services.k8s.aws_openidconnectproviders.yaml
   - bases/iam.services.k8s.aws_policies.yaml
