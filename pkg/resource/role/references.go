@@ -91,50 +91,68 @@ func resolveReferenceForPermissionsBoundary(
 	namespace string,
 	ko *svcapitypes.Role,
 ) error {
-	if ko.Spec.PermissionsBoundaryRef != nil &&
-		ko.Spec.PermissionsBoundaryRef.From != nil {
+	if ko.Spec.PermissionsBoundaryRef != nil && ko.Spec.PermissionsBoundaryRef.From != nil {
 		arr := ko.Spec.PermissionsBoundaryRef.From
 		if arr == nil || arr.Name == nil || *arr.Name == "" {
-			return fmt.Errorf("provided resource reference is nil or empty")
+			return fmt.Errorf("provided resource reference is nil or empty: PermissionsBoundaryRef")
 		}
-		namespacedName := types.NamespacedName{
-			Namespace: namespace,
-			Name:      *arr.Name,
-		}
-		obj := svcapitypes.Policy{}
-		err := apiReader.Get(ctx, namespacedName, &obj)
-		if err != nil {
+		obj := &svcapitypes.Policy{}
+		if err := getReferencedResourceState_Policy(ctx, apiReader, obj, *arr.Name, namespace); err != nil {
 			return err
 		}
-		var refResourceSynced, refResourceTerminal bool
-		for _, cond := range obj.Status.Conditions {
-			if cond.Type == ackv1alpha1.ConditionTypeResourceSynced &&
-				cond.Status == corev1.ConditionTrue {
-				refResourceSynced = true
-			}
-			if cond.Type == ackv1alpha1.ConditionTypeTerminal &&
-				cond.Status == corev1.ConditionTrue {
-				refResourceTerminal = true
-			}
+		ko.Spec.PermissionsBoundary = (*string)(obj.Status.ACKResourceMetadata.ARN)
+	}
+
+	return nil
+}
+
+// getReferencedResourceState_Policy looks up whether a referenced resource
+// exists and is in a ACK.ResourceSynced=True state. If the referenced resource does exist and is
+// in a Synced state, returns nil, otherwise returns `ackerr.ResourceReferenceTerminalFor` or
+// `ResourceReferenceNotSyncedFor` depending on if the resource is in a Terminal state.
+func getReferencedResourceState_Policy(
+	ctx context.Context,
+	apiReader client.Reader,
+	obj *svcapitypes.Policy,
+	name string, // the Kubernetes name of the referenced resource
+	namespace string, // the Kubernetes namespace of the referenced resource
+) error {
+	namespacedName := types.NamespacedName{
+		Namespace: namespace,
+		Name:      name,
+	}
+	err := apiReader.Get(ctx, namespacedName, obj)
+	if err != nil {
+		return err
+	}
+	var refResourceSynced, refResourceTerminal bool
+	for _, cond := range obj.Status.Conditions {
+		if cond.Type == ackv1alpha1.ConditionTypeResourceSynced &&
+			cond.Status == corev1.ConditionTrue {
+			refResourceSynced = true
 		}
-		if refResourceTerminal {
+		if cond.Type == ackv1alpha1.ConditionTypeTerminal &&
+			cond.Status == corev1.ConditionTrue {
 			return ackerr.ResourceReferenceTerminalFor(
 				"Policy",
-				namespace, *arr.Name)
+				namespace, name)
 		}
-		if !refResourceSynced {
-			return ackerr.ResourceReferenceNotSyncedFor(
-				"Policy",
-				namespace, *arr.Name)
-		}
-		if obj.Status.ACKResourceMetadata == nil || obj.Status.ACKResourceMetadata.ARN == nil {
-			return ackerr.ResourceReferenceMissingTargetFieldFor(
-				"Policy",
-				namespace, *arr.Name,
-				"Status.ACKResourceMetadata.ARN")
-		}
-		referencedValue := string(*obj.Status.ACKResourceMetadata.ARN)
-		ko.Spec.PermissionsBoundary = &referencedValue
+	}
+	if refResourceTerminal {
+		return ackerr.ResourceReferenceTerminalFor(
+			"Policy",
+			namespace, name)
+	}
+	if !refResourceSynced {
+		return ackerr.ResourceReferenceNotSyncedFor(
+			"Policy",
+			namespace, name)
+	}
+	if obj.Status.ACKResourceMetadata == nil || obj.Status.ACKResourceMetadata.ARN == nil {
+		return ackerr.ResourceReferenceMissingTargetFieldFor(
+			"Policy",
+			namespace, name,
+			"Status.ACKResourceMetadata.ARN")
 	}
 	return nil
 }
@@ -148,54 +166,21 @@ func resolveReferenceForPolicies(
 	namespace string,
 	ko *svcapitypes.Role,
 ) error {
-	if ko.Spec.PolicyRefs != nil &&
-		len(ko.Spec.PolicyRefs) > 0 {
-		resolvedReferences := []*string{}
-		for _, arrw := range ko.Spec.PolicyRefs {
-			arr := arrw.From
+	if len(ko.Spec.PolicyRefs) > 0 {
+		resolved0 := []*string{}
+		for _, iter0 := range ko.Spec.PolicyRefs {
+			arr := iter0.From
 			if arr == nil || arr.Name == nil || *arr.Name == "" {
-				return fmt.Errorf("provided resource reference is nil or empty")
+				return fmt.Errorf("provided resource reference is nil or empty: PolicyRefs")
 			}
-			namespacedName := types.NamespacedName{
-				Namespace: namespace,
-				Name:      *arr.Name,
-			}
-			obj := svcapitypes.Policy{}
-			err := apiReader.Get(ctx, namespacedName, &obj)
-			if err != nil {
+			obj := &svcapitypes.Policy{}
+			if err := getReferencedResourceState_Policy(ctx, apiReader, obj, *arr.Name, namespace); err != nil {
 				return err
 			}
-			var refResourceSynced, refResourceTerminal bool
-			for _, cond := range obj.Status.Conditions {
-				if cond.Type == ackv1alpha1.ConditionTypeResourceSynced &&
-					cond.Status == corev1.ConditionTrue {
-					refResourceSynced = true
-				}
-				if cond.Type == ackv1alpha1.ConditionTypeTerminal &&
-					cond.Status == corev1.ConditionTrue {
-					refResourceTerminal = true
-				}
-			}
-			if refResourceTerminal {
-				return ackerr.ResourceReferenceTerminalFor(
-					"Policy",
-					namespace, *arr.Name)
-			}
-			if !refResourceSynced {
-				return ackerr.ResourceReferenceNotSyncedFor(
-					"Policy",
-					namespace, *arr.Name)
-			}
-			if obj.Status.ACKResourceMetadata == nil || obj.Status.ACKResourceMetadata.ARN == nil {
-				return ackerr.ResourceReferenceMissingTargetFieldFor(
-					"Policy",
-					namespace, *arr.Name,
-					"Status.ACKResourceMetadata.ARN")
-			}
-			referencedValue := string(*obj.Status.ACKResourceMetadata.ARN)
-			resolvedReferences = append(resolvedReferences, &referencedValue)
+			resolved0 = append(resolved0, (*string)(obj.Status.ACKResourceMetadata.ARN))
 		}
-		ko.Spec.Policies = resolvedReferences
+		ko.Spec.Policies = resolved0
 	}
+
 	return nil
 }
