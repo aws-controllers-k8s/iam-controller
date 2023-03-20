@@ -21,6 +21,8 @@ import (
 	ackutil "github.com/aws-controllers-k8s/runtime/pkg/util"
 	svcsdk "github.com/aws/aws-sdk-go/service/iam"
 	"github.com/samber/lo"
+
+	commonutil "github.com/aws-controllers-k8s/iam-controller/pkg/util"
 )
 
 // syncManagedPolicies examines the managed PolicyARNs in the supplied Group
@@ -153,8 +155,12 @@ func (rm *resourceManager) syncInlinePolicies(
 
 	existingPolicies := latest.ko.Spec.InlinePolicies
 
-	existingPairs := lo.ToPairs(existingPolicies)
-	desiredPairs := lo.ToPairs(desired.ko.Spec.InlinePolicies)
+	existingPairs := lo.ToPairs(
+		commonutil.MapStringFromMapStringPointers(existingPolicies),
+	)
+	desiredPairs := lo.ToPairs(
+		commonutil.MapStringFromMapStringPointers(desired.ko.Spec.InlinePolicies),
+	)
 
 	toDelete, toAdd := lo.Difference(existingPairs, desiredPairs)
 
@@ -165,7 +171,7 @@ func (rm *resourceManager) syncInlinePolicies(
 			"adding inline policy to group",
 			"policy_name", polName,
 		)
-		err = rm.addInlinePolicy(ctx, desired, polName, polDoc)
+		err = rm.addInlinePolicy(ctx, desired, polName, &polDoc)
 		if err != nil {
 			return err
 		}
