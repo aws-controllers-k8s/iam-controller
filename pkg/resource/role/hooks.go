@@ -205,8 +205,12 @@ func (rm *resourceManager) syncInlinePolicies(
 
 	existingPolicies := latest.ko.Spec.InlinePolicies
 
-	existingPairs := lo.ToPairs(existingPolicies)
-	desiredPairs := lo.ToPairs(desired.ko.Spec.InlinePolicies)
+	existingPairs := lo.ToPairs(
+		commonutil.MapStringFromMapStringPointers(existingPolicies),
+	)
+	desiredPairs := lo.ToPairs(
+		commonutil.MapStringFromMapStringPointers(desired.ko.Spec.InlinePolicies),
+	)
 
 	toDelete, toAdd := lo.Difference(existingPairs, desiredPairs)
 
@@ -217,7 +221,7 @@ func (rm *resourceManager) syncInlinePolicies(
 			"adding inline policy to role",
 			"policy_name", polName,
 		)
-		err = rm.addInlinePolicy(ctx, desired, polName, polDoc)
+		err = rm.addInlinePolicy(ctx, desired, polName, &polDoc)
 		if err != nil {
 			return err
 		}
