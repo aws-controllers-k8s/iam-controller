@@ -12,6 +12,7 @@ nameOverride: ""
 fullnameOverride: ""
 
 deployment:
+  replicas: 2
   annotations: {}
   labels: {}
   containerPort: 8080

@@ -11,7 +11,7 @@ metadata:
     k8s-app: {{ include "app.name" . }}
     helm.sh/chart: {{ include "chart.name-version" . }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.deployment.replicas }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "app.name" . }}
@@ -64,6 +64,9 @@ spec:
         - --reconcile-resource-resync-seconds
         - "$(RECONCILE_RESOURCE_RESYNC_SECONDS_{{ $key | upper }})"
 {{- end }}
+        {{- if (gt .Values.deployment.replicas 1.0) }}
+        - --enable-leader-election
+        {{- end }}
         image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         name: controller
