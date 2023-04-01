@@ -420,7 +420,7 @@ func (rm *resourceManager) sdkUpdate(
 		}
 	}
 
-	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.InlinePolicies", "Spec.PermissionsBoundary") {
+	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.InlinePolicies", "Spec.PermissionsBoundary", "Spec.AssumeRolePolicyDocument") {
 		return desired, nil
 	}
 
