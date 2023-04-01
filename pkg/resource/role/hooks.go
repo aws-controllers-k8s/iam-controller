@@ -364,7 +364,7 @@ func (rm *resourceManager) putAssumeRolePolicies(
 	defer func() { exit(err) }()
 
 	input := &svcsdk.UpdateAssumeRolePolicyInput{
-		RoleName:       &r.ko.ObjectMeta.Name, // Name of the role is the name of the K8s object.
+		RoleName:       r.ko.Spec.Name,
 		PolicyDocument: r.ko.Spec.AssumeRolePolicyDocument,
 	}
 	_, err = rm.sdkapi.UpdateAssumeRolePolicyWithContext(ctx, input)
