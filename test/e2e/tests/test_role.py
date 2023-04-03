@@ -14,6 +14,7 @@
 """Integration tests for the IAM Role resource"""
 
 import logging
+import json
 import time
 
 import pytest
@@ -218,26 +219,54 @@ class TestRole:
         latest_inline_policies = role.get_inline_policies(role_name)
         assert len(latest_inline_policies) == 0
 
-        # AssumeRolePolicy testing
+
+        # assumeRolePolicyDocument tests:
+        # Assert that the policy is as expected.
+        # Modify it.
+        # Delete it
 
         assume_role_policy_doc = '''
 {
-  "Version":"2012-10-17",
-  "Statement": [{
-    "Effect":"Deny",
-    "Principal": {
-      "Service": [
-        "ec2.amazonaws.com"
-      ]
-    },
-    "Action": ["sts:AssumeRole"]
-  }]
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": [
+                "Service": "ec2.amazonaws.com"
+            ],
+            "Action": ["sts:AssumeRole"]
+        }
+    ]
+}
+'''
+
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert 'spec' in cr
+        assert 'assumeRolePolicyDocument' in cr['spec']
+
+        assume_role_policy_as_obj = json.loads(assume_role_policy_doc)
+        k8s_assume_role_policy = json.loads(cr['spec']['assumeRolePolicyDocument'])
+        assert assume_role_policy_as_obj == k8s_assume_role_policy
+
+        assume_role_policy_to_deny_doc = '''
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Deny",
+            "Principal": [
+                "Service": "ec2.amazonaws.com"
+            ],
+            "Action": ["sts:AssumeRole"]
+        }
+    ]
 }
 '''
 
         updates = {
-            "spec": {
-                "assumeRolePolicyDocument": assume_role_policy_doc,
+            'spec': {
+                'assumeRolePolicyDocument': assume_role_policy_to_deny_doc,
             }
         }
 
@@ -246,6 +275,29 @@ class TestRole:
 
         cr = k8s.get_resource(ref)
         assert cr is not None
-        assert "spec" in cr
+        assert 'spec' in cr
         assert 'assumeRolePolicyDocument' in cr['spec']
-        assert assume_role_policy_doc == cr['spec']['assumeRolePolicyDocument']
+
+        assume_role_policy_deny_obj = json.loads(assume_role_policy_to_deny_doc)
+        k8s_assume_role_policy_deny = json.loads(cr['spec']['assumeRolePolicyDocument'])
+        assert assume_role_policy_deny_obj == k8s_assume_role_policy_deny
+
+        latest_assume_role_policy_doc = role.get_assume_role_policy(role_name)
+        assert latest_assume_role_policy_doc == k8s_assume_role_policy_deny
+
+        # Delete the assume role policy document.
+        updates = {
+            "spec": {
+                "assumeRolePolicyDocument": None,
+            },
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert "spec" in cr
+        assert 'assumeRolePolicyDocument' not in cr['spec']
+
+        latest_assume_role_policy_doc = role.get_assume_role_policy(role_name)
+        assert len(latest_assume_role_policy_doc) == 0
