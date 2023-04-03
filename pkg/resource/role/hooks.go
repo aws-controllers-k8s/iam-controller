@@ -342,25 +342,14 @@ func (rm *resourceManager) removeInlinePolicy(
 	return err
 }
 
-// syncAssumeRolePolicies syncs the role's assume role policy document.
-func (rm *resourceManager) syncAssumeRolePolicies(
-	ctx context.Context,
-	r *resource,
-) (err error) {
-	rlog := ackrtlog.FromContext(ctx)
-	exit := rlog.Trace("rm.syncAssumeRolePolicies")
-	defer func() { exit(err) }()
-	return rm.putAssumeRolePolicies(ctx, r)
-}
-
 // putAssumeRolePolicies calls the IAM API to set a given role's
 // assume role policy document.
-func (rm *resourceManager) putAssumeRolePolicies(
+func (rm *resourceManager) putAssumeRolePolicy(
 	ctx context.Context,
 	r *resource,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
-	exit := rlog.Trace("rm.putAssumeRolePolicies")
+	exit := rlog.Trace("rm.putAssumeRolePolicy")
 	defer func() { exit(err) }()
 
 	input := &svcsdk.UpdateAssumeRolePolicyInput{

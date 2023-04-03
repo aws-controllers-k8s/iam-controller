@@ -413,7 +413,7 @@ func (rm *resourceManager) sdkUpdate(
 		}
 	}
 	if delta.DifferentAt("Spec.AssumeRolePolicyDocument") {
-		err = rm.syncAssumeRolePolicies(ctx, desired)
+		err = rm.putAssumeRolePolicy(ctx, desired)
 		if err != nil {
 			return nil, err
 		}
