@@ -212,8 +212,40 @@ class TestRole:
 
         cr = k8s.get_resource(ref)
         assert cr is not None
-        assert 'spec' in cr
-        assert 'inlinePolicies' not in cr['spec']
+        assert "spec" in cr
+        assert "inlinePolicies" not in cr["spec"]
 
         latest_inline_policies = role.get_inline_policies(role_name)
         assert len(latest_inline_policies) == 0
+
+        # AssumeRolePolicy testing
+
+        assume_role_policy_doc = '''
+{
+  "Version":"2012-10-17",
+  "Statement": [{
+    "Effect":"Deny",
+    "Principal": {
+      "Service": [
+        "ec2.amazonaws.com"
+      ]
+    },
+    "Action": ["sts:AssumeRole"]
+  }]
+}
+'''
+
+        updates = {
+            "spec": {
+                "assumeRolePolicyDocument": assume_role_policy_doc,
+            }
+        }
+
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert "spec" in cr
+        assert 'assumeRolePolicyDocument' in cr['spec']
+        assert assume_role_policy_doc == cr['spec']['assumeRolePolicyDocument']
