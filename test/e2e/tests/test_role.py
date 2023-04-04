@@ -219,14 +219,9 @@ class TestRole:
         latest_inline_policies = role.get_inline_policies(role_name)
         assert len(latest_inline_policies) == 0
 
+        # AssumeRolePolicyDocument tests
 
-        # assumeRolePolicyDocument tests:
-        # Assert that the policy is as expected.
-        # Modify it.
-        # Delete it
-
-        assume_role_policy_doc = '''
-{
+        assume_role_policy_doc = '''{
     "Version": "2012-10-17",
     "Statement": [
         {
@@ -236,9 +231,7 @@ class TestRole:
             },
             "Action": ["sts:AssumeRole"]
         }
-    ]
-}
-'''
+    ]}'''
 
         cr = k8s.get_resource(ref)
         assert cr is not None
@@ -249,8 +242,7 @@ class TestRole:
         k8s_assume_role_policy = json.loads(cr['spec']['assumeRolePolicyDocument'])
         assert assume_role_policy_as_obj == k8s_assume_role_policy
 
-        assume_role_policy_to_deny_doc = '''
-{
+        assume_role_policy_to_deny_doc = '''{
     "Version": "2012-10-17",
     "Statement": [
         {
@@ -260,9 +252,7 @@ class TestRole:
             },
             "Action": ["sts:AssumeRole"]
         }
-    ]
-}
-'''
+    ]}'''
 
         updates = {
             'spec': {
