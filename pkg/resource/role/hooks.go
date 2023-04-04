@@ -342,6 +342,25 @@ func (rm *resourceManager) removeInlinePolicy(
 	return err
 }
 
+// putAssumeRolePolicies calls the IAM API to set a given role's
+// assume role policy document.
+func (rm *resourceManager) putAssumeRolePolicy(
+	ctx context.Context,
+	r *resource,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.putAssumeRolePolicy")
+	defer func() { exit(err) }()
+
+	input := &svcsdk.UpdateAssumeRolePolicyInput{
+		RoleName:       r.ko.Spec.Name,
+		PolicyDocument: r.ko.Spec.AssumeRolePolicyDocument,
+	}
+	_, err = rm.sdkapi.UpdateAssumeRolePolicyWithContext(ctx, input)
+	rm.metrics.RecordAPICall("UPDATE", "UpdateAssumeRolePolicy", err)
+	return err
+}
+
 // compareTags is a custom comparison function for comparing lists of Tag
 // structs where the order of the structs in the list is not important.
 func compareTags(

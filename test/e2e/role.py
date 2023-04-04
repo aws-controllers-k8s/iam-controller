@@ -149,3 +149,16 @@ def get_inline_policies(role_name):
         return policies
     except c.exceptions.NoSuchEntityException:
         return None
+
+def get_assume_role_policy(role_name):
+    """Returns a dict representing the assume role policy document for the supplied Role.
+
+    If no such Role exists, returns None.
+    """
+    c = boto3.client('iam')
+    try:
+        resp = get(role_name)
+        return resp['AssumeRolePolicyDocument']
+    except c.exceptions.NoSuchEntityException:
+        return None
+

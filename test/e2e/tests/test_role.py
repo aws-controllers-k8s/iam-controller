@@ -14,6 +14,7 @@
 """Integration tests for the IAM Role resource"""
 
 import logging
+import json
 import time
 
 import pytest
@@ -212,8 +213,68 @@ class TestRole:
 
         cr = k8s.get_resource(ref)
         assert cr is not None
-        assert 'spec' in cr
-        assert 'inlinePolicies' not in cr['spec']
+        assert "spec" in cr
+        assert "inlinePolicies" not in cr["spec"]
 
         latest_inline_policies = role.get_inline_policies(role_name)
         assert len(latest_inline_policies) == 0
+
+        # AssumeRolePolicyDocument tests
+
+        assume_role_policy_doc = '''{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": ["ec2.amazonaws.com"]
+            },
+            "Action": ["sts:AssumeRole"]
+        }
+    ]}'''
+
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert 'spec' in cr
+        assert 'assumeRolePolicyDocument' in cr['spec']
+
+        assume_role_policy_as_obj = json.loads(assume_role_policy_doc)
+        k8s_assume_role_policy = json.loads(cr['spec']['assumeRolePolicyDocument'])
+        assert assume_role_policy_as_obj == k8s_assume_role_policy
+
+        assume_role_policy_to_deny_doc = '''{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Deny",
+            "Principal": {
+                "Service": ["ec2.amazonaws.com"]
+            },
+            "Action": ["sts:AssumeRole"]
+        }
+    ]}'''
+
+        updates = {
+            'spec': {
+                'assumeRolePolicyDocument': assume_role_policy_to_deny_doc,
+            }
+        }
+
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert 'spec' in cr
+        assert 'assumeRolePolicyDocument' in cr['spec']
+
+        assume_role_policy_deny_obj = json.loads(assume_role_policy_to_deny_doc)
+        k8s_assume_role_policy_deny = json.loads(cr['spec']['assumeRolePolicyDocument'])
+        assert assume_role_policy_deny_obj == k8s_assume_role_policy_deny
+
+        # AWS slightly modifies the JSON structure underneath us here, so the documents
+        # are not identical. Instead, we can ensure that the change we made is reflected.
+        latest_assume_role_policy_doc = role.get_assume_role_policy(role_name)
+        assert latest_assume_role_policy_doc['Statement'][0]['Effect'] == k8s_assume_role_policy_deny['Statement'][0]['Effect']
+
+        # Assume role policies cannot be entirely deleted, so CRU is tested here.
