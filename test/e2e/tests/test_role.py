@@ -277,19 +277,4 @@ class TestRole:
         latest_assume_role_policy_doc = role.get_assume_role_policy(role_name)
         assert latest_assume_role_policy_doc['Statement'][0]['Effect'] == k8s_assume_role_policy_deny['Statement'][0]['Effect']
 
-        # Delete the assume role policy document.
-        updates = {
-            "spec": {
-                "assumeRolePolicyDocument": None,
-            },
-        }
-        k8s.patch_custom_resource(ref, updates)
-        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
-
-        cr = k8s.get_resource(ref)
-        assert cr is not None
-        assert "spec" in cr
-        assert 'assumeRolePolicyDocument' not in cr['spec']
-
-        latest_assume_role_policy_doc = role.get_assume_role_policy(role_name)
-        assert len(latest_assume_role_policy_doc) == 0
+        # Assume role policies cannot be entirely deleted, so CRU is tested here.
