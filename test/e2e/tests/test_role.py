@@ -231,9 +231,9 @@ class TestRole:
     "Statement": [
         {
             "Effect": "Allow",
-            "Principal": [
-                "Service": "ec2.amazonaws.com"
-            ],
+            "Principal": {
+                "Service": ["ec2.amazonaws.com"]
+            },
             "Action": ["sts:AssumeRole"]
         }
     ]
@@ -255,9 +255,9 @@ class TestRole:
     "Statement": [
         {
             "Effect": "Deny",
-            "Principal": [
-                "Service": "ec2.amazonaws.com"
-            ],
+            "Principal": {
+                "Service": ["ec2.amazonaws.com"]
+            },
             "Action": ["sts:AssumeRole"]
         }
     ]
@@ -282,8 +282,10 @@ class TestRole:
         k8s_assume_role_policy_deny = json.loads(cr['spec']['assumeRolePolicyDocument'])
         assert assume_role_policy_deny_obj == k8s_assume_role_policy_deny
 
+        # AWS slightly modifies the JSON structure underneath us here, so the documents
+        # are not identical. Instead, we can ensure that the change we made is reflected.
         latest_assume_role_policy_doc = role.get_assume_role_policy(role_name)
-        assert latest_assume_role_policy_doc == k8s_assume_role_policy_deny
+        assert latest_assume_role_policy_doc['Statement'][0]['Effect'] == k8s_assume_role_policy_deny['Statement'][0]['Effect']
 
         # Delete the assume role policy document.
         updates = {
