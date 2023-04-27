@@ -63,7 +63,8 @@
                 "iam:DeleteOpenIDConnectProvider",
                 "iam:GetOpenIDConnectProvider",
                 "iam:TagOpenIDConnectProvider",
-                "iam:CreateOpenIDConnectProvider"
+                "iam:CreateOpenIDConnectProvider",
+                "iam:UpdateAssumeRolePolicy"
             ],
             "Resource": "*"
         }
