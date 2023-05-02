@@ -1,0 +1,5 @@
+[codespell]
+skip = ./.git,./go.local.sum
+check-filenames =
+check-hidden =
+quiet = 2
