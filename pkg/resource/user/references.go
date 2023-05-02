@@ -24,86 +24,100 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ackv1alpha1 "github.com/aws-controllers-k8s/runtime/apis/core/v1alpha1"
-	ackcondition "github.com/aws-controllers-k8s/runtime/pkg/condition"
 	ackerr "github.com/aws-controllers-k8s/runtime/pkg/errors"
 	acktypes "github.com/aws-controllers-k8s/runtime/pkg/types"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
 )
 
+// ClearResolvedReferences removes any reference values that were made
+// concrete in the spec. It returns a copy of the input AWSResource which
+// contains the original *Ref values, but none of their respective concrete
+// values.
+func (rm *resourceManager) ClearResolvedReferences(res acktypes.AWSResource) acktypes.AWSResource {
+	ko := rm.concreteResource(res).ko.DeepCopy()
+
+	if ko.Spec.PermissionsBoundaryRef != nil {
+		ko.Spec.PermissionsBoundary = nil
+	}
+
+	if len(ko.Spec.PolicyRefs) > 0 {
+		ko.Spec.Policies = nil
+	}
+
+	return &resource{ko}
+}
+
 // ResolveReferences finds if there are any Reference field(s) present
-// inside AWSResource passed in the parameter and attempts to resolve
-// those reference field(s) into target field(s).
-// It returns an AWSResource with resolved reference(s), and an error if the
-// passed AWSResource's reference field(s) cannot be resolved.
-// This method also adds/updates the ConditionTypeReferencesResolved for the
-// AWSResource.
+// inside AWSResource passed in the parameter and attempts to resolve those
+// reference field(s) into their respective target field(s). It returns a
+// copy of the input AWSResource with resolved reference(s), a boolean which
+// is set to true if the resource contains any references (regardless of if
+// they are resolved successfully) and an error if the passed AWSResource's
+// reference field(s) could not be resolved.
 func (rm *resourceManager) ResolveReferences(
 	ctx context.Context,
 	apiReader client.Reader,
 	res acktypes.AWSResource,
-) (acktypes.AWSResource, error) {
+) (acktypes.AWSResource, bool, error) {
 	namespace := res.MetaObject().GetNamespace()
-	ko := rm.concreteResource(res).ko.DeepCopy()
+	ko := rm.concreteResource(res).ko
+
+	resourceHasReferences := false
 	err := validateReferenceFields(ko)
-	if err == nil {
-		err = resolveReferenceForPermissionsBoundary(ctx, apiReader, namespace, ko)
-	}
-	if err == nil {
-		err = resolveReferenceForPolicies(ctx, apiReader, namespace, ko)
+	if fieldHasReferences, err := rm.resolveReferenceForPermissionsBoundary(ctx, apiReader, namespace, ko); err != nil {
+		return &resource{ko}, (resourceHasReferences || fieldHasReferences), err
+	} else {
+		resourceHasReferences = resourceHasReferences || fieldHasReferences
 	}
 
-	// If there was an error while resolving any reference, reset all the
-	// resolved values so that they do not get persisted inside etcd
-	if err != nil {
-		ko = rm.concreteResource(res).ko.DeepCopy()
+	if fieldHasReferences, err := rm.resolveReferenceForPolicies(ctx, apiReader, namespace, ko); err != nil {
+		return &resource{ko}, (resourceHasReferences || fieldHasReferences), err
+	} else {
+		resourceHasReferences = resourceHasReferences || fieldHasReferences
 	}
-	if hasNonNilReferences(ko) {
-		return ackcondition.WithReferencesResolvedCondition(&resource{ko}, err)
-	}
-	return &resource{ko}, err
+
+	return &resource{ko}, resourceHasReferences, err
 }
 
 // validateReferenceFields validates the reference field and corresponding
 // identifier field.
 func validateReferenceFields(ko *svcapitypes.User) error {
+
 	if ko.Spec.PermissionsBoundaryRef != nil && ko.Spec.PermissionsBoundary != nil {
 		return ackerr.ResourceReferenceAndIDNotSupportedFor("PermissionsBoundary", "PermissionsBoundaryRef")
 	}
-	if ko.Spec.PolicyRefs != nil && ko.Spec.Policies != nil {
+
+	if len(ko.Spec.PolicyRefs) > 0 && len(ko.Spec.Policies) > 0 {
 		return ackerr.ResourceReferenceAndIDNotSupportedFor("Policies", "PolicyRefs")
 	}
 	return nil
 }
 
-// hasNonNilReferences returns true if resource contains a reference to another
-// resource
-func hasNonNilReferences(ko *svcapitypes.User) bool {
-	return false || (ko.Spec.PermissionsBoundaryRef != nil) || (ko.Spec.PolicyRefs != nil)
-}
-
 // resolveReferenceForPermissionsBoundary reads the resource referenced
 // from PermissionsBoundaryRef field and sets the PermissionsBoundary
-// from referenced resource
-func resolveReferenceForPermissionsBoundary(
+// from referenced resource. Returns a boolean indicating whether a reference
+// contains references, or an error
+func (rm *resourceManager) resolveReferenceForPermissionsBoundary(
 	ctx context.Context,
 	apiReader client.Reader,
 	namespace string,
 	ko *svcapitypes.User,
-) error {
+) (hasReferences bool, err error) {
 	if ko.Spec.PermissionsBoundaryRef != nil && ko.Spec.PermissionsBoundaryRef.From != nil {
+		hasReferences = true
 		arr := ko.Spec.PermissionsBoundaryRef.From
-		if arr == nil || arr.Name == nil || *arr.Name == "" {
-			return fmt.Errorf("provided resource reference is nil or empty: PermissionsBoundaryRef")
+		if arr.Name == nil || *arr.Name == "" {
+			return hasReferences, fmt.Errorf("provided resource reference is nil or empty: PermissionsBoundaryRef")
 		}
 		obj := &svcapitypes.Policy{}
 		if err := getReferencedResourceState_Policy(ctx, apiReader, obj, *arr.Name, namespace); err != nil {
-			return err
+			return hasReferences, err
 		}
 		ko.Spec.PermissionsBoundary = (*string)(obj.Status.ACKResourceMetadata.ARN)
 	}
 
-	return nil
+	return hasReferences, nil
 }
 
 // getReferencedResourceState_Policy looks up whether a referenced resource
@@ -159,28 +173,31 @@ func getReferencedResourceState_Policy(
 
 // resolveReferenceForPolicies reads the resource referenced
 // from PolicyRefs field and sets the Policies
-// from referenced resource
-func resolveReferenceForPolicies(
+// from referenced resource. Returns a boolean indicating whether a reference
+// contains references, or an error
+func (rm *resourceManager) resolveReferenceForPolicies(
 	ctx context.Context,
 	apiReader client.Reader,
 	namespace string,
 	ko *svcapitypes.User,
-) error {
-	if len(ko.Spec.PolicyRefs) > 0 {
-		resolved0 := []*string{}
-		for _, iter0 := range ko.Spec.PolicyRefs {
-			arr := iter0.From
-			if arr == nil || arr.Name == nil || *arr.Name == "" {
-				return fmt.Errorf("provided resource reference is nil or empty: PolicyRefs")
+) (hasReferences bool, err error) {
+	for _, f0iter := range ko.Spec.PolicyRefs {
+		if f0iter != nil && f0iter.From != nil {
+			hasReferences = true
+			arr := f0iter.From
+			if arr.Name == nil || *arr.Name == "" {
+				return hasReferences, fmt.Errorf("provided resource reference is nil or empty: PolicyRefs")
 			}
 			obj := &svcapitypes.Policy{}
 			if err := getReferencedResourceState_Policy(ctx, apiReader, obj, *arr.Name, namespace); err != nil {
-				return err
+				return hasReferences, err
 			}
-			resolved0 = append(resolved0, (*string)(obj.Status.ACKResourceMetadata.ARN))
+			if ko.Spec.Policies == nil {
+				ko.Spec.Policies = make([]*string, 0, 1)
+			}
+			ko.Spec.Policies = append(ko.Spec.Policies, (*string)(obj.Status.ACKResourceMetadata.ARN))
 		}
-		ko.Spec.Policies = resolved0
 	}
 
-	return nil
+	return hasReferences, nil
 }
