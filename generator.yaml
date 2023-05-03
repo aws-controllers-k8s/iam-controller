@@ -167,6 +167,9 @@ resources:
         set:
           # The input and output shapes are different...
           - from: PermissionsBoundary.PermissionsBoundaryArn
+      Description:
+        # See above in Policy resource about why this is here.
+        late_initialize: {}
       Path:
         late_initialize: {}
       # In order to support attaching zero or more policies to a role, we use

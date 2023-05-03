@@ -32,6 +32,7 @@ DELETE_WAIT_AFTER_SECONDS = 10
 CHECK_STATUS_WAIT_SECONDS = 10
 MODIFY_WAIT_AFTER_SECONDS = 10
 MAX_SESS_DURATION = 3600 # Note: minimum of 3600 seconds...
+ROLE_DESC = "a simple role"
 
 
 @pytest.fixture(scope="module")
@@ -41,7 +42,7 @@ def simple_role():
 
     replacements = REPLACEMENT_VALUES.copy()
     replacements['ROLE_NAME'] = role_name
-    replacements['ROLE_DESCRIPTION'] = role_desc
+    replacements['ROLE_DESCRIPTION'] = ROLE_DESC
     replacements['MAX_SESSION_DURATION'] = str(MAX_SESS_DURATION)
 
     resource_data = load_resource(
@@ -91,6 +92,10 @@ class TestRole:
         assert 'spec' in cr
         assert 'maxSessionDuration' in cr['spec']
         assert cr['spec']['maxSessionDuration'] == MAX_SESS_DURATION
+        # Check that the Description field has not been removed.
+        # See: https://github.com/aws-controllers-k8s/community/issues/1772
+        assert 'description' in cr['spec']
+        assert cr['spec']['description'] == ROLE_DESC
 
         condition.assert_synced(ref)
 
