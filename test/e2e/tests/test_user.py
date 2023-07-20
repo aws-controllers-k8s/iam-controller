@@ -147,10 +147,20 @@ class TestUser:
 "Resource": ["*"]
 }]
 }'''
+        inline_doc_2 = '''{
+"Version": "2012-10-17",
+"Statement": [{
+"Effect": "Allow",
+"Action": ["s3:Get*"],
+"Resource": ["*"]
+}]
+}'''
+
         updates = {
             "spec": {
                 "inlinePolicies": {
                     "ec2get": inline_doc,
+                    "s3get": inline_doc_2,
                 },
             },
         }
@@ -159,22 +169,58 @@ class TestUser:
 
         expect_inline_policies = {
             'ec2get': inline_doc,
+            's3get': inline_doc_2,
         }
         cr = k8s.get_resource(ref)
         assert cr is not None
         assert 'spec' in cr
         assert 'inlinePolicies' in cr['spec']
-        assert len(cr['spec']['inlinePolicies']) == 1
+        assert len(cr['spec']['inlinePolicies']) == 2
         assert expect_inline_policies == cr['spec']['inlinePolicies']
 
         latest_inline_policies = user.get_inline_policies(user_name)
-        assert len(latest_inline_policies) == 1
+        assert len(latest_inline_policies) == 2
         assert 'ec2get' in latest_inline_policies
+
         got_pol_doc = latest_inline_policies['ec2get']
         nospace_got_doc = "".join(c for c in got_pol_doc if not c.isspace())
         nospace_exp_doc = "".join(c for c in inline_doc if not c.isspace())
-
         assert nospace_exp_doc == nospace_got_doc
+
+        got_pol_doc = latest_inline_policies['s3get']
+        nospace_got_doc = "".join(c for c in got_pol_doc if not c.isspace())
+        nospace_exp_doc = "".join(c for c in inline_doc_2 if not c.isspace())
+        assert nospace_exp_doc == nospace_got_doc
+
+        inline_doc_s3_get_object = '''{
+"Version": "2012-10-17",
+"Statement": [{
+"Effect": "Allow",
+"Action": ["s3:GetObject"],
+"Resource": ["*"]
+}]
+}'''
+        # update s3get policy document
+        updates = {
+            "spec": {
+                "inlinePolicies": {
+                    "ec2get": inline_doc,
+                    "s3get": inline_doc_s3_get_object,
+                },
+            },
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        latest_inline_policies = user.get_inline_policies(user_name)
+        assert len(latest_inline_policies) == 2
+        assert 's3get' in latest_inline_policies
+        assert 'ec2get' in latest_inline_policies
+
+        # expect s3get policy document to change into inlinde_doc_s3_get_object
+        got_pol_doc = latest_inline_policies['s3get']
+        nospace_got_doc = "".join(c for c in got_pol_doc if not c.isspace())
+        nospace_exp_doc = "".join(c for c in inline_doc_s3_get_object if not c.isspace())
 
         # Remove the inline policy we just added and check the updates are
         # reflected in the IAM API
