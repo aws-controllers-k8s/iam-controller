@@ -177,6 +177,11 @@ func (rm *resourceManager) syncInlinePolicies(
 		}
 	}
 	for _, pair := range toDelete {
+		// do not remove elements we just updated with `addInlinePolicy`
+		if _, ok := lo.Find(toAdd, func(entry lo.Entry[string, string]) bool { return entry.Key == pair.Key }); ok {
+			continue
+		}
+
 		polName := pair.Key
 		rlog.Debug(
 			"removing inline policy from group",
