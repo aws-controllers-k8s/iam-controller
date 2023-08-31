@@ -42,15 +42,8 @@ func newResourceDelta(
 		delta.Add("", a, b)
 		return delta
 	}
-	compareTags(delta, a, b)
+	customPreCompare(delta, a, b)
 
-	if ackcompare.HasNilDifference(a.ko.Spec.AssumeRolePolicyDocument, b.ko.Spec.AssumeRolePolicyDocument) {
-		delta.Add("Spec.AssumeRolePolicyDocument", a.ko.Spec.AssumeRolePolicyDocument, b.ko.Spec.AssumeRolePolicyDocument)
-	} else if a.ko.Spec.AssumeRolePolicyDocument != nil && b.ko.Spec.AssumeRolePolicyDocument != nil {
-		if *a.ko.Spec.AssumeRolePolicyDocument != *b.ko.Spec.AssumeRolePolicyDocument {
-			delta.Add("Spec.AssumeRolePolicyDocument", a.ko.Spec.AssumeRolePolicyDocument, b.ko.Spec.AssumeRolePolicyDocument)
-		}
-	}
 	if ackcompare.HasNilDifference(a.ko.Spec.Description, b.ko.Spec.Description) {
 		delta.Add("Spec.Description", a.ko.Spec.Description, b.ko.Spec.Description)
 	} else if a.ko.Spec.Description != nil && b.ko.Spec.Description != nil {

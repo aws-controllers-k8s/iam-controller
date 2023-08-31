@@ -6,6 +6,8 @@ require (
 	github.com/aws-controllers-k8s/runtime v0.27.1
 	github.com/aws/aws-sdk-go v1.44.93
 	github.com/go-logr/logr v1.2.3
+	github.com/google/go-cmp v0.5.9
+	github.com/micahhausler/aws-iam-policy v0.4.2
 	github.com/samber/lo v1.37.0
 	github.com/spf13/pflag v1.0.5
 	k8s.io/api v0.26.8
@@ -13,6 +15,10 @@ require (
 	k8s.io/client-go v0.26.8
 	sigs.k8s.io/controller-runtime v0.14.5
 )
+
+// Temporary fix for github.com/micahhausler/aws-iam-policy. Awaiting for a-hilaly to send
+// a PR to micahhausler/aws-iam-policy to build Equal() method for PolicyDocument struct.
+replace github.com/micahhausler/aws-iam-policy => github.com/a-hilaly/aws-iam-policy v0.0.0-20231121054900-2c56e839ca53
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -30,7 +36,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect

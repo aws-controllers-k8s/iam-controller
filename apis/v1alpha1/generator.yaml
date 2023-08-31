@@ -174,7 +174,7 @@ resources:
   Role:
     hooks:
       delta_pre_compare:
-        code: compareTags(delta, a, b)
+        code: customPreCompare(delta, a, b)
       sdk_read_one_post_set_output:
         template_path: hooks/role/sdk_read_one_post_set_output.go.tpl
       sdk_create_post_set_output:
@@ -232,6 +232,9 @@ resources:
       # policy document.
       InlinePolicies:
         type: map[string]*string
+      AssumeRolePolicyDocument:
+        compare:
+          is_ignored: true
       Tags:
         compare:
           is_ignored: true
