@@ -217,7 +217,7 @@ class TestUser:
         assert 's3get' in latest_inline_policies
         assert 'ec2get' in latest_inline_policies
 
-        # expect s3get policy document to change into inlinde_doc_s3_get_object
+        # expect s3get policy document to change into inline_doc_s3_get_object
         got_pol_doc = latest_inline_policies['s3get']
         nospace_got_doc = "".join(c for c in got_pol_doc if not c.isspace())
         nospace_exp_doc = "".join(c for c in inline_doc_s3_get_object if not c.isspace())
