@@ -4,7 +4,7 @@
 
 image:
   repository: public.ecr.aws/aws-controllers-k8s/iam-controller
-  tag: 1.2.5
+  tag: 1.2.6
   pullPolicy: IfNotPresent
   pullSecrets: []
 
