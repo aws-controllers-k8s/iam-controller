@@ -3,7 +3,7 @@ ignore:
    - AccessKey
    - AccountAlias
    #- Group
-   - InstanceProfile
+   #- InstanceProfile
    - LoginProfile
    #- OpenIDConnectProvider
    #- Policy
@@ -14,6 +14,8 @@ ignore:
    - ServiceSpecificCredential
    #- User
    - VirtualMFADevice
+  field_paths:
+   - CreateInstanceProfileOutput.InstanceProfile.Roles
 operations:
   GetGroup:
     # This is necessary because the GetGroupOutput shape has both a Group and a
@@ -72,6 +74,47 @@ resources:
         type: map[string]*string
     tags:
       ignore: true
+  InstanceProfile:
+    renames:
+      operations:
+        CreateInstanceProfile:
+          input_fields:
+            InstanceProfileName: Name
+        GetInstanceProfile:
+          input_fields:
+            InstanceProfileName: Name
+        DeleteInstanceProfile:
+          input_fields:
+            InstanceProfileName: Name
+    exceptions:
+      terminal_codes:
+        - InvalidInput
+    fields:
+      Path:
+        late_initialize: {}
+      # In order to support attaching a role to the instance profile, custom code
+      # is used to attach/detach the role to the instance profile object based on
+      # the name of the role. Note that an instance profile can only contain a
+      # single IAM role at a given time.
+      Role:
+        type: "*string"
+        references:
+          resource: Role
+          path: Spec.Name
+    hooks:
+      delta_pre_compare:
+        code: compareTags(delta, a, b)
+      sdk_create_post_set_output:
+        template_path: hooks/instance_profile/sdk_create_post_set_output.go.tpl
+      sdk_delete_pre_build_request:
+        template_path: hooks/instance_profile/sdk_delete_pre_build_request.go.tpl
+      sdk_read_one_post_set_output:
+        template_path: hooks/instance_profile/sdk_read_one_post_set_output.go.tpl
+    # There is no `UpdateInstanceProfile` API operation. The only way to update an
+    # instance profile is to update the properties individually or to recreate
+    # the profile entirely.
+    update_operation:
+      custom_method_name: customUpdateInstanceProfile
   Policy:
     renames:
       operations:
