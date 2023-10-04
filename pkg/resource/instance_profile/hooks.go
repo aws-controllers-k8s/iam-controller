@@ -34,7 +34,7 @@ func (rm *resourceManager) customUpdateInstanceProfile(
 	ko := desired.ko.DeepCopy()
 
 	if delta.DifferentAt("Spec.Tags") {
-		if err := rm.syncTags(ctx, desired, latest); err != nil {
+		if err = rm.syncTags(ctx, desired, latest); err != nil {
 			return nil, err
 		}
 	}
@@ -65,10 +65,11 @@ func (rm *resourceManager) syncRole(
 		if latest.ko.Spec.Role == nil {
 			return nil
 		}
-		err = rm.detachRole(ctx, latest)
-		if err != nil {
+		if err = rm.detachRole(ctx, latest); err != nil {
 			return err
 		}
+		// Don't continue, nothing left to do
+		return nil
 	}
 
 	// If the currently attached role and the desired role are different,
@@ -77,8 +78,7 @@ func (rm *resourceManager) syncRole(
 		if *desired.ko.Spec.Role == *latest.ko.Spec.Role {
 			return nil
 		}
-		err = rm.detachRole(ctx, latest)
-		if err != nil {
+		if err = rm.detachRole(ctx, latest); err != nil {
 			return err
 		}
 	}
