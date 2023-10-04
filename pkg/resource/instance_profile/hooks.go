@@ -2,10 +2,13 @@ package instance_profile
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
 	commonutil "github.com/aws-controllers-k8s/iam-controller/pkg/util"
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
+	ackerr "github.com/aws-controllers-k8s/runtime/pkg/errors"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
 	svcsdk "github.com/aws/aws-sdk-go/service/iam"
 )
@@ -21,6 +24,12 @@ func (rm *resourceManager) customUpdateInstanceProfile(
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.customUpdateInstanceProfile")
 	defer func() { exit(err) }()
+
+	// Do not proceed with update if an immutable field was updated
+	if immutableFieldChanges := rm.getImmutableFieldChanges(delta); len(immutableFieldChanges) > 0 {
+		msg := fmt.Sprintf("Immutable Spec fields have been modified: %s", strings.Join(immutableFieldChanges, ","))
+		return nil, ackerr.NewTerminalError(fmt.Errorf(msg))
+	}
 
 	ko := desired.ko.DeepCopy()
 
@@ -84,7 +93,7 @@ func (rm *resourceManager) attachRole(
 	desired *resource,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
-	exit := rlog.Trace("rm.syncRole")
+	exit := rlog.Trace("rm.attachRole")
 	defer func() { exit(err) }()
 
 	input := &svcsdk.AddRoleToInstanceProfileInput{}
@@ -101,7 +110,7 @@ func (rm *resourceManager) detachRole(
 	latest *resource,
 ) (err error) {
 	rlog := ackrtlog.FromContext(ctx)
-	exit := rlog.Trace("rm.syncRole")
+	exit := rlog.Trace("rm.detachRole")
 	defer func() { exit(err) }()
 
 	input := &svcsdk.RemoveRoleFromInstanceProfileInput{}

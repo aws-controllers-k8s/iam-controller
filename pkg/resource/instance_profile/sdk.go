@@ -136,9 +136,9 @@ func (rm *resourceManager) sdkFind(
 
 	rm.setStatusDefaults(ko)
 
-	// Get the existing role associated with the instance profile if
-	// any. This value needs to later be compared with the user
-	// specified value to make sure they are in sync
+	// Get the existing role associated with the instance profile. If the profile
+	// has no role assigned, this field should be `nil`. This value is later
+	// compared with the new desired value to ensure they are in sync.
 	ko.Spec.Role = nil
 	attachedRoles := resp.InstanceProfile.Roles
 	if len(attachedRoles) > 0 {
@@ -307,7 +307,10 @@ func (rm *resourceManager) sdkDelete(
 	// All roles need to be deleted before the instance profile
 	// can be removed
 	if r.ko.Spec.Role != nil {
-		rm.detachRole(ctx, r)
+		err = rm.detachRole(ctx, r)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	input, err := rm.newDeleteRequestPayload(r)
@@ -447,4 +450,16 @@ func (rm *resourceManager) terminalAWSError(err error) bool {
 	default:
 		return false
 	}
+}
+
+// getImmutableFieldChanges returns list of immutable fields from the
+func (rm *resourceManager) getImmutableFieldChanges(
+	delta *ackcompare.Delta,
+) []string {
+	var fields []string
+	if delta.DifferentAt("Spec.Path") {
+		fields = append(fields, "Path")
+	}
+
+	return fields
 }

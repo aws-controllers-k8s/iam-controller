@@ -92,6 +92,7 @@ resources:
     fields:
       Path:
         late_initialize: {}
+        is_immutable: true
       # In order to support attaching a role to the instance profile, custom code
       # is used to attach/detach the role to the instance profile object based on
       # the name of the role. Note that an instance profile can only contain a
