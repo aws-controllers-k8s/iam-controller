@@ -1,0 +1,9 @@
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: InstanceProfile
+metadata:
+  name: $INSTANCE_PROFILE_NAME
+spec:
+  name: $INSTANCE_PROFILE_NAME
+  tags:
+  - key: $TAG_KEY
+    value: $TAG_VALUE

@@ -36,6 +36,7 @@ import (
 	svcresource "github.com/aws-controllers-k8s/iam-controller/pkg/resource"
 
 	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/group"
+	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/instance_profile"
 	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/open_id_connect_provider"
 	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/policy"
 	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/role"

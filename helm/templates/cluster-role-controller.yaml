@@ -69,6 +69,26 @@ rules:
 - apiGroups:
   - iam.services.k8s.aws
   resources:
+  - instanceprofiles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - iam.services.k8s.aws
+  resources:
+  - instanceprofiles/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - iam.services.k8s.aws
+  resources:
   - openidconnectproviders
   verbs:
   - create

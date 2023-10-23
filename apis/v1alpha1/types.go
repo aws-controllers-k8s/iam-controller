@@ -197,21 +197,18 @@ type Group_SDK struct {
 //   - ListInstanceProfiles
 //
 //   - ListInstanceProfilesForRole
-type InstanceProfile struct {
+type InstanceProfile_SDK struct {
 	// The Amazon Resource Name (ARN). ARNs are unique identifiers for Amazon Web
 	// Services resources.
 	//
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the Amazon Web Services General Reference.
-	ARN               *string      `json:"arn,omitempty"`
-	CreateDate        *metav1.Time `json:"createDate,omitempty"`
-	InstanceProfileID *string      `json:"instanceProfileID,omitempty"`
-	Path              *string      `json:"path,omitempty"`
-	// Contains a list of IAM roles.
-	//
-	// This data type is used as a response element in the ListRoles operation.
-	Roles []*Role_SDK `json:"roles,omitempty"`
-	Tags  []*Tag      `json:"tags,omitempty"`
+	ARN                 *string      `json:"arn,omitempty"`
+	CreateDate          *metav1.Time `json:"createDate,omitempty"`
+	InstanceProfileID   *string      `json:"instanceProfileID,omitempty"`
+	InstanceProfileName *string      `json:"instanceProfileName,omitempty"`
+	Path                *string      `json:"path,omitempty"`
+	Tags                []*Tag       `json:"tags,omitempty"`
 }
 
 // Contains the user name and password create date for a user.
@@ -416,7 +413,9 @@ type RoleDetail struct {
 	ARN                      *string      `json:"arn,omitempty"`
 	AssumeRolePolicyDocument *string      `json:"assumeRolePolicyDocument,omitempty"`
 	CreateDate               *metav1.Time `json:"createDate,omitempty"`
-	Path                     *string      `json:"path,omitempty"`
+	// Contains a list of instance profiles.
+	InstanceProfileList []*InstanceProfile_SDK `json:"instanceProfileList,omitempty"`
+	Path                *string                `json:"path,omitempty"`
 	// Contains information about an attached permissions boundary.
 	//
 	// An attached permissions boundary is a managed policy that has been attached

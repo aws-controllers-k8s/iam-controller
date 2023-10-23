@@ -10,6 +10,7 @@ rules:
   - iam.services.k8s.aws
   resources:
   - groups
+  - instanceprofiles
   - openidconnectproviders
   - policies
   - roles
