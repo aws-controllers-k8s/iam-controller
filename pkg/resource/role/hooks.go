@@ -15,12 +15,15 @@ package role
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
+	"reflect"
 
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
 	ackutil "github.com/aws-controllers-k8s/runtime/pkg/util"
 	svcsdk "github.com/aws/aws-sdk-go/service/iam"
+	awsiampolicy "github.com/micahhausler/aws-iam-policy/policy"
 	"github.com/samber/lo"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
@@ -366,6 +369,17 @@ func (rm *resourceManager) putAssumeRolePolicy(
 	return err
 }
 
+// customPreCompare contains logic that help compare two iam Roles. This
+// function is injected in newResourceDelta function.
+func customPreCompare(
+	delta *ackcompare.Delta,
+	a *resource,
+	b *resource,
+) {
+	compareTags(delta, a, b)
+	compareAssumeRolePolicyDocument(delta, a, b)
+}
+
 // compareTags is a custom comparison function for comparing lists of Tag
 // structs where the order of the structs in the list is not important.
 func compareTags(
@@ -379,6 +393,42 @@ func compareTags(
 		if !commonutil.EqualTags(a.ko.Spec.Tags, b.ko.Spec.Tags) {
 			delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
 		}
+	}
+}
+
+// compareAssumeRolePolicyDocument is a custom comparison function for
+// assumeRolePolicyDocuments. The reason why we need a custom function for
+// this fields is the API logic that trims all the trailing while spaces
+// string of provided documents.
+func compareAssumeRolePolicyDocument(
+	delta *ackcompare.Delta,
+	a *resource,
+	b *resource,
+) {
+	// To handle the variability in shapes of JSON objects representing IAM policies,
+	// especially when it comes to statements, actions, and other fields, we need
+	// a custom json.Unmarshaller approach crafted to our specific needs. Luckily,
+	// it happens that @micahhausler buildta library dedicated to this very special
+	// need: github.com/micahhausler/aws-iam-policy.
+	//
+	// NOTE(a-hilaly): I'm pretty aware that there is an error that should be handled.
+	// However, unfortunetly, the `newResourceDelta` cannot return errors (for now),
+	// leaving us with only two solutions, panicking or ignoring the error. The first
+	// solution is an overkill as it will interrupt all the goroutines from functioning
+	// and causing the controller to enter in a 'CrashLoopBackOff' state, which is not
+	// fair, given that it's also is responsible of managing multiple objects of other
+	// different resources.
+	//
+	// TOOD(a-hilaly): To address this issue, concider changing the delta signature
+	// to return an error or take a context.Context to use the runtime logger. Both
+	// of these changes require runtime/code-generator changes.
+	var policyDocumentA awsiampolicy.Policy
+	_ = json.Unmarshal([]byte(*a.ko.Spec.AssumeRolePolicyDocument), &policyDocumentA)
+	var policyDocumentB awsiampolicy.Policy
+	_ = json.Unmarshal([]byte(*b.ko.Spec.AssumeRolePolicyDocument), &policyDocumentB)
+
+	if !reflect.DeepEqual(policyDocumentA, policyDocumentB) {
+		delta.Add("Spec.AssumeRolePolicyDocument", a.ko.Spec.AssumeRolePolicyDocument, b.ko.Spec.AssumeRolePolicyDocument)
 	}
 }
 

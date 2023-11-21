@@ -293,6 +293,9 @@ class TestRole:
         k8s_assume_role_policy = json.loads(cr['spec']['assumeRolePolicyDocument'])
         assert assume_role_policy_as_obj == k8s_assume_role_policy
 
+        # make sure the resource is not in an "update infinite loop"
+        condition.assert_synced(ref)
+
         assume_role_policy_to_deny_doc = '''{
     "Version": "2012-10-17",
     "Statement": [
@@ -329,3 +332,6 @@ class TestRole:
         assert latest_assume_role_policy_doc['Statement'][0]['Effect'] == k8s_assume_role_policy_deny['Statement'][0]['Effect']
 
         # Assume role policies cannot be entirely deleted, so CRU is tested here.
+
+        # make sure the resource is not in an "update infinite loop"
+        condition.assert_synced(ref)
