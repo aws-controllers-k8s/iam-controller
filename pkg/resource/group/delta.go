@@ -43,9 +43,9 @@ func newResourceDelta(
 		return delta
 	}
 
-	if ackcompare.HasNilDifference(a.ko.Spec.InlinePolicies, b.ko.Spec.InlinePolicies) {
+	if len(a.ko.Spec.InlinePolicies) != len(b.ko.Spec.InlinePolicies) {
 		delta.Add("Spec.InlinePolicies", a.ko.Spec.InlinePolicies, b.ko.Spec.InlinePolicies)
-	} else if a.ko.Spec.InlinePolicies != nil && b.ko.Spec.InlinePolicies != nil {
+	} else if len(a.ko.Spec.InlinePolicies) > 0 {
 		if !ackcompare.MapStringStringPEqual(a.ko.Spec.InlinePolicies, b.ko.Spec.InlinePolicies) {
 			delta.Add("Spec.InlinePolicies", a.ko.Spec.InlinePolicies, b.ko.Spec.InlinePolicies)
 		}
@@ -64,8 +64,12 @@ func newResourceDelta(
 			delta.Add("Spec.Path", a.ko.Spec.Path, b.ko.Spec.Path)
 		}
 	}
-	if !ackcompare.SliceStringPEqual(a.ko.Spec.Policies, b.ko.Spec.Policies) {
+	if len(a.ko.Spec.Policies) != len(b.ko.Spec.Policies) {
 		delta.Add("Spec.Policies", a.ko.Spec.Policies, b.ko.Spec.Policies)
+	} else if len(a.ko.Spec.Policies) > 0 {
+		if !ackcompare.SliceStringPEqual(a.ko.Spec.Policies, b.ko.Spec.Policies) {
+			delta.Add("Spec.Policies", a.ko.Spec.Policies, b.ko.Spec.Policies)
+		}
 	}
 	if !reflect.DeepEqual(a.ko.Spec.PolicyRefs, b.ko.Spec.PolicyRefs) {
 		delta.Add("Spec.PolicyRefs", a.ko.Spec.PolicyRefs, b.ko.Spec.PolicyRefs)

@@ -56,8 +56,8 @@ type RoleSpec struct {
 	// role. If you do not specify a value for this setting, the default value of
 	// one hour is applied. This setting can have a value from 1 hour to 12 hours.
 	//
-	// Anyone who assumes the role from the or API can use the DurationSeconds API
-	// parameter or the duration-seconds CLI parameter to request a longer session.
+	// Anyone who assumes the role from the CLI or API can use the DurationSeconds
+	// API parameter or the duration-seconds CLI parameter to request a longer session.
 	// The MaxSessionDuration setting determines the maximum duration that can be
 	// requested using the DurationSeconds parameter. If users don't specify a value
 	// for the DurationSeconds parameter, their security credentials are valid for
@@ -72,6 +72,10 @@ type RoleSpec struct {
 	// IAM user, group, role, and policy names must be unique within the account.
 	// Names are not distinguished by case. For example, you cannot create resources
 	// named both "MyResource" and "myresource".
+	//
+	// This parameter allows (through its regex pattern (http://wikipedia.org/wiki/regex))
+	// a string of characters consisting of upper and lowercase alphanumeric characters
+	// with no spaces. You can also include any of the following characters: _+=,.@-
 	// +kubebuilder:validation:Required
 	Name *string `json:"name"`
 	// The path to the role. For more information about paths, see IAM Identifiers
@@ -88,8 +92,18 @@ type RoleSpec struct {
 	// (\u007F), including most punctuation characters, digits, and upper and lowercased
 	// letters.
 	Path *string `json:"path,omitempty"`
-	// The ARN of the policy that is used to set the permissions boundary for the
-	// role.
+	// The ARN of the managed policy that is used to set the permissions boundary
+	// for the role.
+	//
+	// A permissions boundary policy defines the maximum permissions that identity-based
+	// policies can grant to an entity, but does not grant permissions. Permissions
+	// boundaries do not define the maximum permissions that a resource-based policy
+	// can grant to an entity. To learn more, see Permissions boundaries for IAM
+	// entities (https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html)
+	// in the IAM User Guide.
+	//
+	// For more information about policy types, see Policy types (https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html#access_policy-types)
+	// in the IAM User Guide.
 	PermissionsBoundary    *string                                    `json:"permissionsBoundary,omitempty"`
 	PermissionsBoundaryRef *ackv1alpha1.AWSResourceReferenceWrapper   `json:"permissionsBoundaryRef,omitempty"`
 	Policies               []*string                                  `json:"policies,omitempty"`
@@ -132,7 +146,7 @@ type RoleStatus struct {
 	// if your Region began supporting these features within the last year. The
 	// role might have been used more than 400 days ago. For more information, see
 	// Regions where data is tracked (https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_access-advisor.html#access-advisor_tracking-period)
-	// in the IAM User Guide.
+	// in the IAM user Guide.
 	// +kubebuilder:validation:Optional
 	RoleLastUsed *RoleLastUsed `json:"roleLastUsed,omitempty"`
 }
