@@ -86,7 +86,7 @@ spec:
                   hash value of the certificate used by https://keys.server.example.com.
                   \n For more information about obtaining the OIDC provider thumbprint,
                   see Obtaining the thumbprint for an OpenID Connect provider (https://docs.aws.amazon.com/IAM/latest/UserGuide/identity-providers-oidc-obtain-thumbprint.html)
-                  in the IAM User Guide."
+                  in the IAM user Guide."
                 items:
                   type: string
                 type: array

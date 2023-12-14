@@ -44,11 +44,19 @@ func newResourceDelta(
 	}
 	customPreCompare(delta, a, b)
 
-	if !ackcompare.SliceStringPEqual(a.ko.Spec.ClientIDs, b.ko.Spec.ClientIDs) {
+	if len(a.ko.Spec.ClientIDs) != len(b.ko.Spec.ClientIDs) {
 		delta.Add("Spec.ClientIDs", a.ko.Spec.ClientIDs, b.ko.Spec.ClientIDs)
+	} else if len(a.ko.Spec.ClientIDs) > 0 {
+		if !ackcompare.SliceStringPEqual(a.ko.Spec.ClientIDs, b.ko.Spec.ClientIDs) {
+			delta.Add("Spec.ClientIDs", a.ko.Spec.ClientIDs, b.ko.Spec.ClientIDs)
+		}
 	}
-	if !ackcompare.SliceStringPEqual(a.ko.Spec.Thumbprints, b.ko.Spec.Thumbprints) {
+	if len(a.ko.Spec.Thumbprints) != len(b.ko.Spec.Thumbprints) {
 		delta.Add("Spec.Thumbprints", a.ko.Spec.Thumbprints, b.ko.Spec.Thumbprints)
+	} else if len(a.ko.Spec.Thumbprints) > 0 {
+		if !ackcompare.SliceStringPEqual(a.ko.Spec.Thumbprints, b.ko.Spec.Thumbprints) {
+			delta.Add("Spec.Thumbprints", a.ko.Spec.Thumbprints, b.ko.Spec.Thumbprints)
+		}
 	}
 
 	return delta

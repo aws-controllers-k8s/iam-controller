@@ -61,7 +61,7 @@ type OpenIDConnectProviderSpec struct {
 	//
 	// For more information about obtaining the OIDC provider thumbprint, see Obtaining
 	// the thumbprint for an OpenID Connect provider (https://docs.aws.amazon.com/IAM/latest/UserGuide/identity-providers-oidc-obtain-thumbprint.html)
-	// in the IAM User Guide.
+	// in the IAM user Guide.
 	// +kubebuilder:validation:Required
 	Thumbprints []*string `json:"thumbprints"`
 	// The URL of the identity provider. The URL must begin with https:// and should
