@@ -24,16 +24,19 @@ import (
 	acktypes "github.com/aws-controllers-k8s/runtime/pkg/types"
 	ackrtutil "github.com/aws-controllers-k8s/runtime/pkg/util"
 	ackrtwebhook "github.com/aws-controllers-k8s/runtime/pkg/webhook"
-	svcsdk "github.com/aws/aws-sdk-go/service/iam"
 	flag "github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrlrt "sigs.k8s.io/controller-runtime"
+	ctrlrtcache "sigs.k8s.io/controller-runtime/pkg/cache"
 	ctrlrtmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	ctrlrtwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	svctypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
 	svcresource "github.com/aws-controllers-k8s/iam-controller/pkg/resource"
+	svcsdk "github.com/aws/aws-sdk-go/service/iam"
 
 	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/group"
 	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/instance_profile"
@@ -89,14 +92,28 @@ func main() {
 		os.Exit(1)
 	}
 
+	watchNamespaces := make(map[string]ctrlrtcache.Config, 0)
+	namespaces, err := ackCfg.GetWatchNamespaces()
+	if err != nil {
+		for _, namespace := range namespaces {
+			watchNamespaces[namespace] = ctrlrtcache.Config{}
+		}
+	}
 	mgr, err := ctrlrt.NewManager(ctrlrt.GetConfigOrDie(), ctrlrt.Options{
-		Scheme:                  scheme,
-		Port:                    port,
-		Host:                    host,
-		MetricsBindAddress:      ackCfg.MetricsAddr,
+		Scheme: scheme,
+		Cache: ctrlrtcache.Options{
+			Scheme:            scheme,
+			DefaultNamespaces: watchNamespaces,
+		},
+		WebhookServer: &ctrlrtwebhook.DefaultServer{
+			Options: ctrlrtwebhook.Options{
+				Port: port,
+				Host: host,
+			},
+		},
+		Metrics:                 metricsserver.Options{BindAddress: ackCfg.MetricsAddr},
 		LeaderElection:          ackCfg.EnableLeaderElection,
 		LeaderElectionID:        "ack-" + awsServiceAPIGroup,
-		Namespace:               ackCfg.WatchNamespace,
 		LeaderElectionNamespace: ackCfg.LeaderElectionNamespace,
 	})
 	if err != nil {
@@ -136,7 +153,6 @@ func main() {
 					err, "unable to register webhook "+webhook.UID(),
 					"aws.service", awsServiceAlias,
 				)
-
 			}
 		}
 	}
