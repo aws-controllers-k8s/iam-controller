@@ -259,11 +259,6 @@ func (rm *resourceManager) sdkCreate(
 	} else {
 		ko.Status.CreateDate = nil
 	}
-	if resp.Role.Description != nil {
-		ko.Spec.Description = resp.Role.Description
-	} else {
-		ko.Spec.Description = nil
-	}
 	if resp.Role.MaxSessionDuration != nil {
 		ko.Spec.MaxSessionDuration = resp.Role.MaxSessionDuration
 	} else {
