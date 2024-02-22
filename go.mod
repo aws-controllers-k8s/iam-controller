@@ -5,7 +5,7 @@ go 1.21
 toolchain go1.21.5
 
 require (
-	github.com/aws-controllers-k8s/runtime v0.30.0
+	github.com/aws-controllers-k8s/runtime v0.31.0
 	github.com/aws/aws-sdk-go v1.49.0
 	github.com/go-logr/logr v1.4.1
 	github.com/micahhausler/aws-iam-policy v0.4.2
@@ -14,7 +14,7 @@ require (
 	k8s.io/api v0.29.0
 	k8s.io/apimachinery v0.29.0
 	k8s.io/client-go v0.29.0
-	sigs.k8s.io/controller-runtime v0.17.0
+	sigs.k8s.io/controller-runtime v0.17.2
 )
 
 // Temporary fix for github.com/micahhausler/aws-iam-policy. Awaiting for a-hilaly to send
