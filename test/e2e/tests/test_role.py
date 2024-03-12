@@ -38,7 +38,6 @@ ROLE_DESC = "a simple role"
 @pytest.fixture(scope="module")
 def simple_role():
     role_name = random_suffix_name("my-simple-role", 24)
-    role_desc = "a simple role"
 
     replacements = REPLACEMENT_VALUES.copy()
     replacements['ROLE_NAME'] = role_name
@@ -109,14 +108,20 @@ class TestRole:
         # wait some time and verify that the IAM server-side resource
         # shows the new value of the field.
         updates = {
-            "spec": {"maxSessionDuration": new_max_sess_duration},
+            "spec": {
+                "maxSessionDuration": new_max_sess_duration,
+                "description": "a simple role with a new max session duration",
+            },
         }
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
+        condition.assert_synced(ref)
+
         latest = role.get(role_name)
         assert latest is not None
         assert latest['MaxSessionDuration'] == new_max_sess_duration
+        assert latest["Description"] == "a simple role with a new max session duration"
 
         # Test the code paths that synchronize the attached policies for a role
         policy_arns = [
@@ -131,6 +136,8 @@ class TestRole:
         }
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        condition.assert_synced(ref)
 
         latest_policy_arns = role.get_attached_policy_arns(role_name)
         assert latest_policy_arns == policy_arns
@@ -158,6 +165,8 @@ class TestRole:
         }
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        condition.assert_synced(ref)
 
         after_update_expected_tags = [
             {
@@ -262,6 +271,8 @@ class TestRole:
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
+        condition.assert_synced(ref)
+
         cr = k8s.get_resource(ref)
         assert cr is not None
         assert "spec" in cr
@@ -316,6 +327,8 @@ class TestRole:
 
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        condition.assert_synced(ref)
 
         cr = k8s.get_resource(ref)
         assert cr is not None

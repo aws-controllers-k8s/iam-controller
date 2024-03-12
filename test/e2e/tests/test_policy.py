@@ -109,6 +109,8 @@ class TestPolicy:
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
+        condition.assert_synced(ref)
+
         latest_tags = policy.get_tags(policy_arn)
         after_update_expected_tags = [
             {
@@ -128,6 +130,8 @@ class TestPolicy:
         }
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        condition.assert_synced(ref)
 
         latest_tags = policy.get_tags(policy_arn)
         after_update_expected_tags = [

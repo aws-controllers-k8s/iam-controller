@@ -254,11 +254,6 @@ func (rm *resourceManager) sdkCreate(
 	} else {
 		ko.Status.DefaultVersionID = nil
 	}
-	if resp.Policy.Description != nil {
-		ko.Spec.Description = resp.Policy.Description
-	} else {
-		ko.Spec.Description = nil
-	}
 	if resp.Policy.IsAttachable != nil {
 		ko.Status.IsAttachable = resp.Policy.IsAttachable
 	} else {
