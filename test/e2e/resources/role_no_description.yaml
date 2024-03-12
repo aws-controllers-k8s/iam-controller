@@ -1,0 +1,19 @@
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: Role
+metadata:
+  name: $ROLE_NAME
+spec:
+  name: $ROLE_NAME
+  assumeRolePolicyDocument: >
+    {
+      "Version":"2012-10-17",
+      "Statement": [{
+        "Effect":"Allow",
+        "Principal": {
+          "Service": [
+            "ec2.amazonaws.com"
+          ]
+        },
+        "Action": ["sts:AssumeRole"]
+      }]
+    }
