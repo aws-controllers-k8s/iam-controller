@@ -56,6 +56,10 @@ spec:
                  * ListGroups
             properties:
               inlinePolicies:
+                description: |-
+                  These are policy documents that are added to the group using the  Put/DeleteGroupPolicy APIs.
+
+                  The Object keys are the names of the policies and the values are the policy documents.
                 additionalProperties:
                   type: string
                 type: object

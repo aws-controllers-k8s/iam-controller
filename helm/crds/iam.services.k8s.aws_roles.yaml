@@ -78,6 +78,11 @@ spec:
                 description: A description of the role.
                 type: string
               inlinePolicies:
+                description: |-
+                  These are policy documents that are added to the role using the Put/DeleteRolePolicy
+                  APIs.
+
+                  The Object keys are the names of the policies and the values are the policy documents.
                 additionalProperties:
                   type: string
                 type: object
