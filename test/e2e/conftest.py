@@ -32,6 +32,9 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "slow: mark test as slow to run"
     )
+    config.addinivalue_line(
+        "markers", "resource_data: mark test with data to use when creating fixture"
+    )
 
 def pytest_collection_modifyitems(config, items):
     if config.getoption("--runslow"):

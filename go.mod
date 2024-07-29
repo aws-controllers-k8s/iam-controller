@@ -5,7 +5,7 @@ go 1.22.0
 toolchain go1.22.5
 
 require (
-	github.com/aws-controllers-k8s/runtime v0.35.0
+	github.com/aws-controllers-k8s/runtime v0.35.1-0.20240719172343-a132c887e8d4
 	github.com/aws/aws-sdk-go v1.49.0
 	github.com/go-logr/logr v1.4.1
 	github.com/micahhausler/aws-iam-policy v0.4.2
