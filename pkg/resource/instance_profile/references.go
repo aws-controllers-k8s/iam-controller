@@ -56,12 +56,11 @@ func (rm *resourceManager) ResolveReferences(
 	apiReader client.Reader,
 	res acktypes.AWSResource,
 ) (acktypes.AWSResource, bool, error) {
-	namespace := res.MetaObject().GetNamespace()
 	ko := rm.concreteResource(res).ko
 
 	resourceHasReferences := false
 	err := validateReferenceFields(ko)
-	if fieldHasReferences, err := rm.resolveReferenceForRole(ctx, apiReader, namespace, ko); err != nil {
+	if fieldHasReferences, err := rm.resolveReferenceForRole(ctx, apiReader, ko); err != nil {
 		return &resource{ko}, (resourceHasReferences || fieldHasReferences), err
 	} else {
 		resourceHasReferences = resourceHasReferences || fieldHasReferences
@@ -87,7 +86,6 @@ func validateReferenceFields(ko *svcapitypes.InstanceProfile) error {
 func (rm *resourceManager) resolveReferenceForRole(
 	ctx context.Context,
 	apiReader client.Reader,
-	namespace string,
 	ko *svcapitypes.InstanceProfile,
 ) (hasReferences bool, err error) {
 	if ko.Spec.RoleRef != nil && ko.Spec.RoleRef.From != nil {
@@ -95,6 +93,10 @@ func (rm *resourceManager) resolveReferenceForRole(
 		arr := ko.Spec.RoleRef.From
 		if arr.Name == nil || *arr.Name == "" {
 			return hasReferences, fmt.Errorf("provided resource reference is nil or empty: RoleRef")
+		}
+		namespace := ko.ObjectMeta.GetNamespace()
+		if arr.Namespace != nil && *arr.Namespace != "" {
+			namespace = *arr.Namespace
 		}
 		obj := &svcapitypes.Role{}
 		if err := getReferencedResourceState_Role(ctx, apiReader, obj, *arr.Name, namespace); err != nil {

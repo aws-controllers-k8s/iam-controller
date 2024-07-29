@@ -60,18 +60,17 @@ func (rm *resourceManager) ResolveReferences(
 	apiReader client.Reader,
 	res acktypes.AWSResource,
 ) (acktypes.AWSResource, bool, error) {
-	namespace := res.MetaObject().GetNamespace()
 	ko := rm.concreteResource(res).ko
 
 	resourceHasReferences := false
 	err := validateReferenceFields(ko)
-	if fieldHasReferences, err := rm.resolveReferenceForPermissionsBoundary(ctx, apiReader, namespace, ko); err != nil {
+	if fieldHasReferences, err := rm.resolveReferenceForPermissionsBoundary(ctx, apiReader, ko); err != nil {
 		return &resource{ko}, (resourceHasReferences || fieldHasReferences), err
 	} else {
 		resourceHasReferences = resourceHasReferences || fieldHasReferences
 	}
 
-	if fieldHasReferences, err := rm.resolveReferenceForPolicies(ctx, apiReader, namespace, ko); err != nil {
+	if fieldHasReferences, err := rm.resolveReferenceForPolicies(ctx, apiReader, ko); err != nil {
 		return &resource{ko}, (resourceHasReferences || fieldHasReferences), err
 	} else {
 		resourceHasReferences = resourceHasReferences || fieldHasReferences
@@ -101,7 +100,6 @@ func validateReferenceFields(ko *svcapitypes.Role) error {
 func (rm *resourceManager) resolveReferenceForPermissionsBoundary(
 	ctx context.Context,
 	apiReader client.Reader,
-	namespace string,
 	ko *svcapitypes.Role,
 ) (hasReferences bool, err error) {
 	if ko.Spec.PermissionsBoundaryRef != nil && ko.Spec.PermissionsBoundaryRef.From != nil {
@@ -109,6 +107,10 @@ func (rm *resourceManager) resolveReferenceForPermissionsBoundary(
 		arr := ko.Spec.PermissionsBoundaryRef.From
 		if arr.Name == nil || *arr.Name == "" {
 			return hasReferences, fmt.Errorf("provided resource reference is nil or empty: PermissionsBoundaryRef")
+		}
+		namespace := ko.ObjectMeta.GetNamespace()
+		if arr.Namespace != nil && *arr.Namespace != "" {
+			namespace = *arr.Namespace
 		}
 		obj := &svcapitypes.Policy{}
 		if err := getReferencedResourceState_Policy(ctx, apiReader, obj, *arr.Name, namespace); err != nil {
@@ -178,7 +180,6 @@ func getReferencedResourceState_Policy(
 func (rm *resourceManager) resolveReferenceForPolicies(
 	ctx context.Context,
 	apiReader client.Reader,
-	namespace string,
 	ko *svcapitypes.Role,
 ) (hasReferences bool, err error) {
 	for _, f0iter := range ko.Spec.PolicyRefs {
@@ -187,6 +188,10 @@ func (rm *resourceManager) resolveReferenceForPolicies(
 			arr := f0iter.From
 			if arr.Name == nil || *arr.Name == "" {
 				return hasReferences, fmt.Errorf("provided resource reference is nil or empty: PolicyRefs")
+			}
+			namespace := ko.ObjectMeta.GetNamespace()
+			if arr.Namespace != nil && *arr.Namespace != "" {
+				namespace = *arr.Namespace
 			}
 			obj := &svcapitypes.Policy{}
 			if err := getReferencedResourceState_Policy(ctx, apiReader, obj, *arr.Name, namespace); err != nil {
