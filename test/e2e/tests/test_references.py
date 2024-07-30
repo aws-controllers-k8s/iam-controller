@@ -18,6 +18,8 @@ import time
 
 import pytest
 
+from logging import getLogger
+
 from acktest.k8s import condition
 from acktest.k8s import resource as k8s
 from acktest.resources import random_suffix_name
@@ -32,6 +34,9 @@ DELETE_ROLE_TIMEOUT_SECONDS = 10
 # Little longer to delete the policy since it's referred-to from the role...
 DELETE_POLICY_TIMEOUT_SECONDS = 30
 CHECK_WAIT_AFTER_REF_RESOLVE_SECONDS = 10
+TESTING_NAMESPACE = "custom_namespace"
+
+log = getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def referred_policy_name():
@@ -39,21 +44,32 @@ def referred_policy_name():
 
 
 @pytest.fixture(scope="module")
-def referring_role(referred_policy_name):
+def referring_role(request, referred_policy_name):
     role_name = random_suffix_name("referring-role", 24)
+
+    marker = request.node.get_closest_marker("resource_data")
+    filename = "role_referring"
+    namespace = "default"
+
+    if marker is not None:
+        data = marker.args[0]
+        if 'withNamespace' in data and data['withNamespace']:
+            filename = "role_referring_namespace"
+            namespace = TESTING_NAMESPACE
+            replacements['POLICY_NAMESPACE'] = namespace
 
     replacements = REPLACEMENT_VALUES.copy()
     replacements['ROLE_NAME'] = role_name
     replacements['POLICY_NAME'] = referred_policy_name
 
     resource_data = load_resource(
-        "role_referring",
+        filename,
         additional_replacements=replacements,
     )
 
     ref = k8s.CustomResourceReference(
         CRD_GROUP, CRD_VERSION, ROLE_RESOURCE_PLURAL,
-        role_name, namespace="default",
+        role_name, namespace=namespace,
     )
     k8s.create_custom_resource(ref, resource_data)
     cr = k8s.wait_resource_consumed_by_controller(ref)
@@ -80,21 +96,36 @@ def referring_role(referred_policy_name):
 
 
 @pytest.fixture(scope="module")
-def referred_policy(referred_policy_name):
+def referred_policy(request, referred_policy_name):
     policy_desc = "a referred-to policy"
+
+    marker = request.node.get_closest_marker("resource_data")
+    filename = "policy_simple"
+    namespace = "default"
+
+    if marker is not None:
+        data = marker.args[0]
+        if 'withNamespace' in data:
+            filename = "policy_simple_namespace"
+            namespace = TESTING_NAMESPACE
+            replacements['POLICY_NAMESPACE'] = namespace
+            k8s.create_k8s_namespace(
+                namespace
+            )
+            
 
     replacements = REPLACEMENT_VALUES.copy()
     replacements['POLICY_NAME'] = referred_policy_name
     replacements['POLICY_DESCRIPTION'] = policy_desc
 
     resource_data = load_resource(
-        "policy_simple",
+        filename,
         additional_replacements=replacements,
     )
 
     ref = k8s.CustomResourceReference(
         CRD_GROUP, CRD_VERSION, POLICY_RESOURCE_PLURAL,
-        referred_policy_name, namespace="default",
+        referred_policy_name, namespace=namespace,
     )
     k8s.create_custom_resource(ref, resource_data)
     cr = k8s.wait_resource_consumed_by_controller(ref)
@@ -125,6 +156,7 @@ def referred_policy(referred_policy_name):
 @service_marker
 @pytest.mark.canary
 class TestReferences:
+    @pytest.mark.resource_data({'withNamespace': False})
     def test_role_policy_references(self, referring_role, referred_policy):
 
         # create the resources in order that initially the reference resolution
@@ -155,3 +187,38 @@ class TestReferences:
         assert deleted
 
         role.wait_until_deleted(role_name)
+    
+    @pytest.mark.resource_data({'withNamespace': True})
+    def test_role_policy_namespace_references(self, referring_role, referred_policy):
+
+        # create the resources in order that initially the reference resolution
+        # fails and then when the referenced resource gets created, then all
+        # resolutions eventually pass and resources get synced.
+        time.sleep(CHECK_WAIT_AFTER_REF_RESOLVE_SECONDS)
+
+        role_ref, role_cr, role_name = referring_role
+
+        time.sleep(1)
+
+        policy_ref, policy_cr, policy_arn = referred_policy
+
+        time.sleep(CHECK_WAIT_AFTER_REF_RESOLVE_SECONDS)
+
+        condition.assert_synced(policy_ref)
+        condition.assert_synced(role_ref)
+
+        role.wait_until_exists(role_name)
+
+        # NOTE(jaypipes): We need to manually delete the Role first because
+        # pytest fixtures will try to clean up the Policy fixture *first*
+        # (because it was initialized after Role) but if we try to delete the
+        # Role before the Policy, the cascading delete protection of resource
+        # references will mean the Role won't be deleted.
+        _, deleted = k8s.delete_custom_resource(
+            role_ref,
+            period_length=DELETE_ROLE_TIMEOUT_SECONDS,
+        )
+        assert deleted
+
+        role.wait_until_deleted(role_name)
+    

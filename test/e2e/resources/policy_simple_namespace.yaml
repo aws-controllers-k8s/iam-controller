@@ -1,0 +1,12 @@
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: Policy
+metadata:
+  name: $POLICY_NAME
+  namespace: $POLICY_NAMESPACE 
+spec:
+  name: $POLICY_NAME
+  description: $POLICY_DESCRIPTION
+  policyDocument: '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:ListAllMyBuckets","Resource":"arn:aws:s3:::*"},{"Effect":"Allow","Action":["s3:List*"],"Resource":["*"]}]}'
+  tags:
+    - key: tag1
+      value: val1
