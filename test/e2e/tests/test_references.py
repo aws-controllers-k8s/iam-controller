@@ -18,7 +18,7 @@ import time
 
 import pytest
 
-from logging import getLogger
+import logging 
 
 from acktest.k8s import condition
 from acktest.k8s import resource as k8s
@@ -34,31 +34,31 @@ DELETE_ROLE_TIMEOUT_SECONDS = 10
 # Little longer to delete the policy since it's referred-to from the role...
 DELETE_POLICY_TIMEOUT_SECONDS = 30
 CHECK_WAIT_AFTER_REF_RESOLVE_SECONDS = 10
-TESTING_NAMESPACE = "custom_namespace"
 
-log = getLogger(__name__)
 
 @pytest.fixture(scope="module")
 def referred_policy_name():
     return random_suffix_name("referred-policy", 24)
 
-
 @pytest.fixture(scope="module")
-def referring_role(request, referred_policy_name):
+def referred_policy_namspace():
+    return random_suffix_name("policy-namespace", 24)
+
+
+@pytest.fixture(scope="function")
+def referring_role(request, referred_policy_name, referred_policy_namspace):
     role_name = random_suffix_name("referring-role", 24)
 
     marker = request.node.get_closest_marker("resource_data")
     filename = "role_referring"
-    namespace = "default"
+    replacements = REPLACEMENT_VALUES.copy()
 
     if marker is not None:
         data = marker.args[0]
         if 'withNamespace' in data and data['withNamespace']:
             filename = "role_referring_namespace"
-            namespace = TESTING_NAMESPACE
-            replacements['POLICY_NAMESPACE'] = namespace
+            replacements['POLICY_NAMESPACE'] = referred_policy_namspace
 
-    replacements = REPLACEMENT_VALUES.copy()
     replacements['ROLE_NAME'] = role_name
     replacements['POLICY_NAME'] = referred_policy_name
 
@@ -69,7 +69,7 @@ def referring_role(request, referred_policy_name):
 
     ref = k8s.CustomResourceReference(
         CRD_GROUP, CRD_VERSION, ROLE_RESOURCE_PLURAL,
-        role_name, namespace=namespace,
+        role_name, namespace="default",
     )
     k8s.create_custom_resource(ref, resource_data)
     cr = k8s.wait_resource_consumed_by_controller(ref)
@@ -95,26 +95,27 @@ def referring_role(request, referred_policy_name):
         role.wait_until_deleted(role_name)
 
 
-@pytest.fixture(scope="module")
-def referred_policy(request, referred_policy_name):
+@pytest.fixture(scope="function")
+def referred_policy(request, referred_policy_name, referred_policy_namspace):
     policy_desc = "a referred-to policy"
 
     marker = request.node.get_closest_marker("resource_data")
     filename = "policy_simple"
     namespace = "default"
 
+    replacements = REPLACEMENT_VALUES.copy()
+
     if marker is not None:
         data = marker.args[0]
-        if 'withNamespace' in data:
-            filename = "policy_simple_namespace"
-            namespace = TESTING_NAMESPACE
-            replacements['POLICY_NAMESPACE'] = namespace
+        if 'withNamespace' in data and data['withNamespace']:
+            namespace = referred_policy_namspace
             k8s.create_k8s_namespace(
                 namespace
             )
+            time.sleep(CHECK_WAIT_AFTER_REF_RESOLVE_SECONDS)
+            filename = "policy_simple_namespace"
+            replacements['POLICY_NAMESPACE'] = namespace
             
-
-    replacements = REPLACEMENT_VALUES.copy()
     replacements['POLICY_NAME'] = referred_policy_name
     replacements['POLICY_DESCRIPTION'] = policy_desc
 
