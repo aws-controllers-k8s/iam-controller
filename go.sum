@@ -2,6 +2,8 @@ github.com/a-hilaly/aws-iam-policy v0.0.0-20231121054900-2c56e839ca53 h1:2uNM0nR
 github.com/a-hilaly/aws-iam-policy v0.0.0-20231121054900-2c56e839ca53/go.mod h1:Ojgst9ZFn+VEEJpqtuw/LxVGqEf2+hwWBlkYWvF/XWM=
 github.com/aws-controllers-k8s/runtime v0.35.1-0.20240719172343-a132c887e8d4 h1:CW58T4qFJpoF37hCPlV1NHCc6mdxNf6jdvLobVolSY0=
 github.com/aws-controllers-k8s/runtime v0.35.1-0.20240719172343-a132c887e8d4/go.mod h1:gI2pWb20UGLP2SnHf1a1VzTd7iVVy+/I9VAzT0Y+Dew=
+github.com/aws-controllers-k8s/runtime v0.35.1-0.20240801040145-dda2022eddbe h1:C3TvDrT9k/wgED1L0q88iqn+IyjVau3kJ9aGlTETCjA=
+github.com/aws-controllers-k8s/runtime v0.35.1-0.20240801040145-dda2022eddbe/go.mod h1:gI2pWb20UGLP2SnHf1a1VzTd7iVVy+/I9VAzT0Y+Dew=
 github.com/aws/aws-sdk-go v1.49.0 h1:g9BkW1fo9GqKfwg2+zCD+TW/D36Ux+vtfJ8guF4AYmY=
 github.com/aws/aws-sdk-go v1.49.0/go.mod h1:LF8svs817+Nz+DmiMQKTO3ubZ/6IaTpq3TjupRn3Eqk=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
