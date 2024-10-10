@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.16.2
   name: roles.iam.services.k8s.aws
 spec:
   group: iam.services.k8s.aws
@@ -40,7 +40,6 @@ spec:
             description: |-
               RoleSpec defines the desired state of Role.
 
-
               Contains information about an IAM role. This structure is returned as a response
               element in several API operations that interact with roles.
             properties:
@@ -49,28 +48,22 @@ spec:
                   The trust relationship policy document that grants an entity permission to
                   assume the role.
 
-
                   In IAM, you must provide a JSON policy that has been converted to a string.
                   However, for CloudFormation templates formatted in YAML, you can provide
                   the policy in JSON or YAML format. CloudFormation always converts a YAML
                   policy to JSON format before submitting it to IAM.
 
-
                   The regex pattern (http://wikipedia.org/wiki/regex) used to validate this
                   parameter is a string of characters consisting of the following:
-
 
                      * Any printable ASCII character ranging from the space character (\u0020)
                      through the end of the ASCII character range
 
-
                      * The printable characters in the Basic Latin and Latin-1 Supplement character
                      set (through \u00FF)
 
-
                      * The special characters tab (\u0009), line feed (\u000A), and carriage
                      return (\u000D)
-
 
                   Upon success, the response includes the same trust policy in JSON format.
                 type: string
@@ -86,7 +79,6 @@ spec:
                   The maximum session duration (in seconds) that you want to set for the specified
                   role. If you do not specify a value for this setting, the default value of
                   one hour is applied. This setting can have a value from 1 hour to 12 hours.
-
 
                   Anyone who assumes the role from the CLI or API can use the DurationSeconds
                   API parameter or the duration-seconds CLI parameter to request a longer session.
@@ -104,11 +96,9 @@ spec:
                 description: |-
                   The name of the role to create.
 
-
                   IAM user, group, role, and policy names must be unique within the account.
                   Names are not distinguished by case. For example, you cannot create resources
                   named both "MyResource" and "myresource".
-
 
                   This parameter allows (through its regex pattern (http://wikipedia.org/wiki/regex))
                   a string of characters consisting of upper and lowercase alphanumeric characters
@@ -120,10 +110,8 @@ spec:
                   (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
                   in the IAM User Guide.
 
-
                   This parameter is optional. If it is not included, it defaults to a slash
                   (/).
-
 
                   This parameter allows (through its regex pattern (http://wikipedia.org/wiki/regex))
                   a string of characters consisting of either a forward slash (/) by itself
@@ -137,7 +125,6 @@ spec:
                   The ARN of the managed policy that is used to set the permissions boundary
                   for the role.
 
-
                   A permissions boundary policy defines the maximum permissions that identity-based
                   policies can grant to an entity, but does not grant permissions. Permissions
                   boundaries do not define the maximum permissions that a resource-based policy
@@ -145,14 +132,13 @@ spec:
                   entities (https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_boundaries.html)
                   in the IAM User Guide.
 
-
                   For more information about policy types, see Policy types (https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html#access_policy-types)
                   in the IAM User Guide.
                 type: string
               permissionsBoundaryRef:
                 description: "AWSResourceReferenceWrapper provides a wrapper around
                   *AWSResourceReference\ntype to provide more user friendly syntax
-                  for references using 'from' field\nEx:\nAPIIDRef:\n\n\n\tfrom:\n\t
+                  for references using 'from' field\nEx:\nAPIIDRef:\n\n\tfrom:\n\t
                   \ name: my-api"
                 properties:
                   from:
@@ -174,7 +160,7 @@ spec:
                 items:
                   description: "AWSResourceReferenceWrapper provides a wrapper around
                     *AWSResourceReference\ntype to provide more user friendly syntax
-                    for references using 'from' field\nEx:\nAPIIDRef:\n\n\n\tfrom:\n\t
+                    for references using 'from' field\nEx:\nAPIIDRef:\n\n\tfrom:\n\t
                     \ name: my-api"
                   properties:
                     from:
@@ -195,7 +181,6 @@ spec:
                   of a key name and an associated value. For more information about tagging,
                   see Tagging IAM resources (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_tags.html)
                   in the IAM User Guide.
-
 
                   If any one of the tags is invalid or if you exceed the allowed maximum number
                   of tags, then the entire request fails and the resource is not created.
@@ -233,7 +218,6 @@ spec:
                       when it has verified that an "adopted" resource (a resource where the
                       ARN annotation was set by the Kubernetes user on the CR) exists and
                       matches the supplied CR's Spec field values.
-                      TODO(vijat@): Find a better strategy for resources that do not have ARN in CreateOutputResponse
                       https://github.com/aws/aws-controllers-k8s/issues/270
                     type: string
                   ownerAccountID:
