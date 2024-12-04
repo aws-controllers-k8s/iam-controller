@@ -22,6 +22,7 @@ from acktest.k8s import condition
 from acktest.k8s import resource as k8s
 from acktest.resources import random_suffix_name
 from e2e import service_marker, CRD_GROUP, CRD_VERSION, load_resource
+from e2e.bootstrap_resources import get_bootstrap_resources
 from e2e.common.types import POLICY_RESOURCE_PLURAL
 from e2e.replacement_values import REPLACEMENT_VALUES
 from e2e import policy
@@ -32,6 +33,7 @@ CHECK_WAIT_AFTER_SECONDS = 10
 # NOTE(jaypipes): I've seen Tagris take nearly 20 seconds to return updated tag
 # information on a resource.
 MODIFY_WAIT_AFTER_SECONDS = 20
+CREATE_WAIT_AFTER_SECONDS = 10
 
 
 @pytest.fixture(scope="module")
@@ -76,6 +78,33 @@ def simple_policy():
     assert deleted
 
     policy.wait_until_deleted(policy_arn)
+
+@pytest.fixture(scope="module")
+def adopt_policy():
+    resource_arn = get_bootstrap_resources().AdoptedPolicy.arns[0]
+    resource_name = random_suffix_name("adopted-policy", 24)
+    replacements = REPLACEMENT_VALUES.copy()
+    replacements["POLICY_ADOPTION_NAME"] = resource_name
+    replacements["ADOPTION_POLICY"] = "adopt"
+    replacements["ADOPTION_FIELDS"] = f"{{\\\"arn\\\": \\\"{resource_arn}\\\"}}"
+
+    resource_data = load_resource(
+        "policy_adoption",
+        additional_replacements=replacements,
+    )    
+
+    ref = k8s.CustomResourceReference(
+        CRD_GROUP, CRD_VERSION, POLICY_RESOURCE_PLURAL,
+        resource_name, namespace="default",
+    )
+    k8s.create_custom_resource(ref, resource_data)
+
+    time.sleep(CREATE_WAIT_AFTER_SECONDS)
+    cr = k8s.wait_resource_consumed_by_controller(ref)
+    assert cr is not None
+
+    yield (ref, cr, resource_arn)
+
 
 
 @service_marker
@@ -197,3 +226,39 @@ class TestPolicy:
         after_pv = policy.get_version(policy_arn, "v2")
         after_doc = after_pv["Document"]
         assert after_doc == new_policy_doc
+
+    def test_policy_adopt_update(self, adopt_policy):
+        ref, cr, policy_arn = adopt_policy
+
+        condition.assert_synced(ref)
+
+        assert cr is not None
+        assert 'status' in cr
+        assert 'defaultVersionID' in cr['status']
+        assert cr['status']['defaultVersionID'] == 'v1'
+
+        new_policy_doc = {
+            "Version":"2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": "s3:ListAllMyBuckets",
+                    "Resource": "*",
+                },
+            ],
+        }
+
+        updates = {
+            "spec": {"policyDocument": json.dumps(new_policy_doc)},
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert 'status' in cr
+        assert 'defaultVersionID' in cr['status']
+        assert cr['status']['defaultVersionID'] == 'v2'
+
+        policy_doc = policy.get_version(policy_arn, "v2")["Document"]
+        assert policy_doc == new_policy_doc
