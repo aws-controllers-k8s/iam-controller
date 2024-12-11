@@ -24,6 +24,7 @@ from acktest.k8s import resource as k8s
 from acktest.resources import random_suffix_name
 from e2e import service_marker, CRD_GROUP, CRD_VERSION, load_resource
 from e2e.common.types import ROLE_RESOURCE_PLURAL
+from e2e.bootstrap_resources import get_bootstrap_resources
 from e2e.replacement_values import REPLACEMENT_VALUES
 from e2e import role
 from e2e import tag
@@ -70,6 +71,31 @@ def simple_role():
     assert deleted
 
     role.wait_until_deleted(role_name)
+
+@pytest.fixture(scope="module")
+def adopt_role():
+    resource_name = get_bootstrap_resources().AdoptedRole.name
+    replacements = REPLACEMENT_VALUES.copy()
+    replacements['ROLE_ADOPTION_NAME'] = resource_name
+    replacements['ADOPTION_POLICY'] = "adopt"
+    replacements['ADOPTION_FIELDS'] = f"{{\\\"name\\\": \\\"{resource_name}\\\"}}"
+
+    resource_data = load_resource(
+        "role_adoption",
+        additional_replacements=replacements,
+    )
+
+    ref = k8s.CustomResourceReference(
+        CRD_GROUP, CRD_VERSION, ROLE_RESOURCE_PLURAL,
+        resource_name, namespace="default",
+    )
+    k8s.create_custom_resource(ref, resource_data)
+
+    time.sleep(CHECK_STATUS_WAIT_SECONDS)
+    cr = k8s.wait_resource_consumed_by_controller(ref)
+    assert cr is not None
+
+    yield (ref, cr)
 
 
 @service_marker
@@ -348,3 +374,17 @@ class TestRole:
 
         # make sure the resource is not in an "update infinite loop"
         condition.assert_synced(ref)
+
+    
+    def test_role_adopt(self, adopt_role):
+        ref, cr = adopt_role
+
+        condition.assert_synced(ref)
+
+        assert cr is not None
+        assert 'status' in cr
+        assert 'spec' in cr
+        assert 'policies' in cr['spec']
+
+        user_policies = get_bootstrap_resources().AdoptedRole.managed_policies
+        assert set(cr['spec']['policies']) == set(user_policies) 
