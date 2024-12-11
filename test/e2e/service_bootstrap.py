@@ -15,16 +15,31 @@
 """
 
 import logging
+import json
 
 from acktest.bootstrapping import Resources, BootstrapFailureException
-from acktest.bootstrapping.iam import Role
-from acktest.bootstrapping.vpc import VPC
+from acktest.bootstrapping.iam import UserPolicies, Role
 from e2e import bootstrap_directory
 from e2e.bootstrap_resources import BootstrapResources
 
 def service_bootstrap() -> Resources:
     logging.getLogger().setLevel(logging.INFO)
-    resources = BootstrapResources()
+    sample_policy = json.dumps({
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "s3:ListBucket",
+                ],
+                "Resource": "*"
+            }
+        ]
+    })
+    resources = BootstrapResources(
+        AdoptedPolicy=UserPolicies("adopted-policies", policy_documents=[sample_policy]),
+        AdoptedRole=Role("adopted-role", "eks.amazonaws.com", managed_policies=["arn:aws:iam::aws:policy/AmazonSQSFullAccess", "arn:aws:iam::aws:policy/AmazonEC2FullAccess"])
+    )
 
     try:
         resources.bootstrap()
