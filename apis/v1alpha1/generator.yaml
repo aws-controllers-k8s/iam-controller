@@ -37,8 +37,8 @@ resources:
         template_path: hooks/group/sdk_delete_pre_build_request.go.tpl
     exceptions:
       terminal_codes:
-        - InvalidInput
-        - MalformedPolicyDocument
+        - InvalidInputException
+        - MalformedPolicyDocumentException
     renames:
       operations:
         CreateGroup:
@@ -88,7 +88,7 @@ resources:
             InstanceProfileName: Name
     exceptions:
       terminal_codes:
-        - InvalidInput
+        - InvalidInputException
     fields:
       Path:
         late_initialize: {}
@@ -145,8 +145,8 @@ resources:
       custom_method_name: customUpdatePolicy
     exceptions:
       terminal_codes:
-        - InvalidInput
-        - MalformedPolicyDocument
+        - InvalidInputException
+        - MalformedPolicyDocumentException
     fields:
       # Left for historical purposes. It looks like late_initialize is was
       # causing the controller to infinitely requeue (every 5 seconds) when the
@@ -195,8 +195,8 @@ resources:
         template_path: hooks/role/sdk_delete_pre_build_request.go.tpl
     exceptions:
       terminal_codes:
-        - InvalidInput
-        - MalformedPolicyDocument
+        - InvalidInputException
+        - MalformedPolicyDocumentException
     renames:
       operations:
         CreateRole:
@@ -260,8 +260,7 @@ resources:
         template_path: hooks/open_id_connect_provider/sdk_read_one_post_set_output.go.tpl
     exceptions:
       terminal_codes:
-        - InvalidInput 
-        - EntityAlreadyExists
+        - InvalidInputException
     renames:
       operations:
         CreateOpenIDConnectProvider:
@@ -298,7 +297,7 @@ resources:
         template_path: hooks/user/sdk_delete_pre_build_request.go.tpl
     exceptions:
       terminal_codes:
-        - InvalidInput
+        - InvalidInputException
     renames:
       operations:
         CreateUser:

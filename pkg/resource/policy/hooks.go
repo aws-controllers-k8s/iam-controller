@@ -22,7 +22,8 @@ import (
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	ackcondition "github.com/aws-controllers-k8s/runtime/pkg/condition"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
-	svcsdk "github.com/aws/aws-sdk-go/service/iam"
+	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
+	svcsdktypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	corev1 "k8s.io/api/core/v1"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
@@ -167,17 +168,17 @@ func (rm *resourceManager) getTags(
 	res := []*svcapitypes.Tag{}
 
 	for {
-		resp, err = rm.sdkapi.ListPolicyTagsWithContext(ctx, input)
+		resp, err = rm.sdkapi.ListPolicyTags(ctx, input)
 		if err != nil || resp == nil {
 			break
 		}
 		for _, t := range resp.Tags {
 			res = append(res, &svcapitypes.Tag{Key: t.Key, Value: t.Value})
 		}
-		if resp.IsTruncated != nil && !*resp.IsTruncated {
+		if !resp.IsTruncated {
 			break
 		}
-		input.SetMarker(*resp.Marker)
+		input.Marker = resp.Marker
 		rm.metrics.RecordAPICall("READ_MANY", "ListPolicyTags", err)
 	}
 	return res, err
@@ -195,13 +196,13 @@ func (rm *resourceManager) addTags(
 
 	input := &svcsdk.TagPolicyInput{}
 	input.PolicyArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
-	inTags := []*svcsdk.Tag{}
+	inTags := []svcsdktypes.Tag{}
 	for _, t := range tags {
-		inTags = append(inTags, &svcsdk.Tag{Key: t.Key, Value: t.Value})
+		inTags = append(inTags, svcsdktypes.Tag{Key: t.Key, Value: t.Value})
 	}
 	input.Tags = inTags
 
-	_, err = rm.sdkapi.TagPolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.TagPolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "TagPolicy", err)
 	return err
 }
@@ -218,13 +219,13 @@ func (rm *resourceManager) removeTags(
 
 	input := &svcsdk.UntagPolicyInput{}
 	input.PolicyArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
-	inTagKeys := []*string{}
+	inTagKeys := []string{}
 	for _, t := range tags {
-		inTagKeys = append(inTagKeys, t.Key)
+		inTagKeys = append(inTagKeys, *t.Key)
 	}
 	input.TagKeys = inTagKeys
 
-	_, err = rm.sdkapi.UntagPolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.UntagPolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "UntagPolicy", err)
 	return err
 }
@@ -254,10 +255,9 @@ func (rm *resourceManager) updatePolicyDocument(
 	input.PolicyArn = policyARN
 	input.PolicyDocument = r.ko.Spec.PolicyDocument
 
-	trueVal := true
-	input.SetAsDefault = &trueVal
+	input.SetAsDefault = true
 
-	resp, err := rm.sdkapi.CreatePolicyVersionWithContext(ctx, input)
+	resp, err := rm.sdkapi.CreatePolicyVersion(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "CreatePolicyVersion", err)
 	if err != nil {
 		return "", err
@@ -328,11 +328,11 @@ func (rm *resourceManager) getPolicyVersion(
 	defer func() { exit(err) }()
 
 	input := &svcsdk.GetPolicyVersionInput{}
-	input.SetPolicyArn(policyARN)
-	input.SetVersionId(version)
+	input.PolicyArn = &policyARN
+	input.VersionId = &version
 
 	var resp *svcsdk.GetPolicyVersionOutput
-	resp, err = rm.sdkapi.GetPolicyVersionWithContext(ctx, input)
+	resp, err = rm.sdkapi.GetPolicyVersion(ctx, input)
 	rm.metrics.RecordAPICall("READ_ONE", "GetPolicyVersion", err)
 
 	if err != nil {
@@ -354,9 +354,7 @@ func (rm *resourceManager) getPolicyVersion(
 			}
 			pv.document = doc
 		}
-		if resp.PolicyVersion.IsDefaultVersion != nil {
-			pv.isDefault = *resp.PolicyVersion.IsDefaultVersion
-		}
+		pv.isDefault = resp.PolicyVersion.IsDefaultVersion
 	}
 	return pv, nil
 }
@@ -372,12 +370,12 @@ func (rm *resourceManager) getPolicyVersions(
 	defer func() { exit(err) }()
 
 	input := &svcsdk.ListPolicyVersionsInput{}
-	input.SetPolicyArn(policyARN)
+	input.PolicyArn = &policyARN
 
 	var resp *svcsdk.ListPolicyVersionsOutput
 	versions = []policyVersion{}
 	for {
-		resp, err = rm.sdkapi.ListPolicyVersionsWithContext(ctx, input)
+		resp, err = rm.sdkapi.ListPolicyVersions(ctx, input)
 		if err != nil || resp == nil {
 			break
 		}
@@ -390,14 +388,14 @@ func (rm *resourceManager) getPolicyVersions(
 			pv := policyVersion{
 				version:    *v.VersionId,
 				createDate: v.CreateDate,
-				isDefault:  *v.IsDefaultVersion,
+				isDefault:  v.IsDefaultVersion,
 			}
 			versions = append(versions, pv)
 		}
-		if resp.IsTruncated != nil && !*resp.IsTruncated {
+		if !resp.IsTruncated {
 			break
 		}
-		input.SetMarker(*resp.Marker)
+		input.Marker = resp.Marker
 		rm.metrics.RecordAPICall("READ_MANY", "ListPolicyVersions", err)
 	}
 
@@ -421,10 +419,10 @@ func (rm *resourceManager) deletePolicyVersion(
 	defer func() { exit(err) }()
 
 	input := &svcsdk.DeletePolicyVersionInput{}
-	input.SetPolicyArn(policyARN)
-	input.SetVersionId(version)
+	input.PolicyArn = &policyARN
+	input.VersionId = &version
 
-	_, err = rm.sdkapi.DeletePolicyVersionWithContext(ctx, input)
+	_, err = rm.sdkapi.DeletePolicyVersion(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "DeletePolicyVersion", err)
 	return err
 }
