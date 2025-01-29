@@ -260,7 +260,7 @@ resources:
         template_path: hooks/open_id_connect_provider/sdk_read_one_post_set_output.go.tpl
     exceptions:
       terminal_codes:
-        - InvalidInput 
+        - InvalidInput
         - EntityAlreadyExists
     renames:
       operations:

@@ -22,7 +22,8 @@ import (
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
 	ackutil "github.com/aws-controllers-k8s/runtime/pkg/util"
-	svcsdk "github.com/aws/aws-sdk-go/service/iam"
+	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
+	svcsdktypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	awsiampolicy "github.com/micahhausler/aws-iam-policy/policy"
 	"github.com/samber/lo"
 
@@ -44,7 +45,7 @@ func (rm *resourceManager) putRolePermissionsBoundary(
 		RoleName:            r.ko.Spec.Name,
 		PermissionsBoundary: r.ko.Spec.PermissionsBoundary,
 	}
-	_, err = rm.sdkapi.PutRolePermissionsBoundaryWithContext(ctx, input)
+	_, err = rm.sdkapi.PutRolePermissionsBoundary(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "PutRolePermissionsBoundary", err)
 	return err
 }
@@ -60,7 +61,7 @@ func (rm *resourceManager) deleteRolePermissionsBoundary(
 	defer func() { exit(err) }()
 
 	input := &svcsdk.DeleteRolePermissionsBoundaryInput{RoleName: r.ko.Spec.Name}
-	_, err = rm.sdkapi.DeleteRolePermissionsBoundaryWithContext(ctx, input)
+	_, err = rm.sdkapi.DeleteRolePermissionsBoundary(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "DeleteRolePermissionsBoundary", err)
 	return err
 }
@@ -139,17 +140,16 @@ func (rm *resourceManager) getManagedPolicies(
 	input.RoleName = r.ko.Spec.Name
 	res := []*string{}
 
-	err = rm.sdkapi.ListAttachedRolePoliciesPagesWithContext(
-		ctx, input, func(page *svcsdk.ListAttachedRolePoliciesOutput, _ bool) bool {
-			if page == nil {
-				return true
-			}
-			for _, p := range page.AttachedPolicies {
-				res = append(res, p.PolicyArn)
-			}
-			return page.IsTruncated != nil && *page.IsTruncated
-		},
-	)
+	paginator := svcsdk.NewListAttachedRolePoliciesPaginator(rm.sdkapi, input)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range page.AttachedPolicies {
+			res = append(res, p.PolicyArn)
+		}
+	}
 	rm.metrics.RecordAPICall("READ_MANY", "ListAttachedRolePolicies", err)
 	return res, err
 }
@@ -168,7 +168,7 @@ func (rm *resourceManager) addManagedPolicy(
 	input := &svcsdk.AttachRolePolicyInput{}
 	input.RoleName = r.ko.Spec.Name
 	input.PolicyArn = policyARN
-	_, err = rm.sdkapi.AttachRolePolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.AttachRolePolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "AttachRolePolicy", err)
 	return err
 }
@@ -187,7 +187,7 @@ func (rm *resourceManager) removeManagedPolicy(
 	input := &svcsdk.DetachRolePolicyInput{}
 	input.RoleName = r.ko.Spec.Name
 	input.PolicyArn = policyARN
-	_, err = rm.sdkapi.DetachRolePolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.DetachRolePolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "DetachRolePolicy", err)
 	return err
 }
@@ -273,17 +273,16 @@ func (rm *resourceManager) getInlinePolicies(
 	input.RoleName = roleName
 	res := map[string]*string{}
 
-	err = rm.sdkapi.ListRolePoliciesPagesWithContext(
-		ctx, input, func(page *svcsdk.ListRolePoliciesOutput, _ bool) bool {
-			if page == nil {
-				return true
-			}
-			for _, p := range page.PolicyNames {
-				res[*p] = nil
-			}
-			return page.IsTruncated != nil && *page.IsTruncated
-		},
-	)
+	paginator := svcsdk.NewListRolePoliciesPaginator(rm.sdkapi, input)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range page.PolicyNames {
+			res[p] = nil
+		}
+	}
 	rm.metrics.RecordAPICall("READ_MANY", "ListRolePolicies", err)
 
 	// Now we need to grab the policy documents for each policy name
@@ -291,7 +290,7 @@ func (rm *resourceManager) getInlinePolicies(
 		input := &svcsdk.GetRolePolicyInput{}
 		input.RoleName = roleName
 		input.PolicyName = &polName
-		resp, err := rm.sdkapi.GetRolePolicyWithContext(ctx, input)
+		resp, err := rm.sdkapi.GetRolePolicy(ctx, input)
 		rm.metrics.RecordAPICall("READ_ONE", "GetRolePolicy", err)
 		if err != nil {
 			return nil, err
@@ -326,7 +325,7 @@ func (rm *resourceManager) addInlinePolicy(
 		return err
 	}
 	input.PolicyDocument = &cleanedDoc
-	_, err = rm.sdkapi.PutRolePolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.PutRolePolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "PutRolePolicy", err)
 	return err
 }
@@ -345,7 +344,7 @@ func (rm *resourceManager) removeInlinePolicy(
 	input := &svcsdk.DeleteRolePolicyInput{}
 	input.RoleName = r.ko.Spec.Name
 	input.PolicyName = &policyName
-	_, err = rm.sdkapi.DeleteRolePolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.DeleteRolePolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "DeleteRolePolicy", err)
 	return err
 }
@@ -364,7 +363,7 @@ func (rm *resourceManager) putAssumeRolePolicy(
 		RoleName:       r.ko.Spec.Name,
 		PolicyDocument: r.ko.Spec.AssumeRolePolicyDocument,
 	}
-	_, err = rm.sdkapi.UpdateAssumeRolePolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.UpdateAssumeRolePolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "UpdateAssumeRolePolicy", err)
 	return err
 }
@@ -514,16 +513,17 @@ func (rm *resourceManager) getTags(
 	res := []*svcapitypes.Tag{}
 
 	for {
-		resp, err = rm.sdkapi.ListRoleTagsWithContext(ctx, input)
+		resp, err = rm.sdkapi.ListRoleTags(ctx, input)
 		if err != nil || resp == nil {
 			break
 		}
 		for _, t := range resp.Tags {
 			res = append(res, &svcapitypes.Tag{Key: t.Key, Value: t.Value})
 		}
-		if resp.IsTruncated != nil && !*resp.IsTruncated {
+		if !resp.IsTruncated {
 			break
 		}
+		input.Marker = resp.Marker
 	}
 	rm.metrics.RecordAPICall("READ_MANY", "ListRoleTags", err)
 	return res, err
@@ -541,13 +541,13 @@ func (rm *resourceManager) addTags(
 
 	input := &svcsdk.TagRoleInput{}
 	input.RoleName = r.ko.Spec.Name
-	inTags := []*svcsdk.Tag{}
+	inTags := []svcsdktypes.Tag{}
 	for _, t := range tags {
-		inTags = append(inTags, &svcsdk.Tag{Key: t.Key, Value: t.Value})
+		inTags = append(inTags, svcsdktypes.Tag{Key: t.Key, Value: t.Value})
 	}
 	input.Tags = inTags
 
-	_, err = rm.sdkapi.TagRoleWithContext(ctx, input)
+	_, err = rm.sdkapi.TagRole(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "TagRole", err)
 	return err
 }
@@ -564,13 +564,13 @@ func (rm *resourceManager) removeTags(
 
 	input := &svcsdk.UntagRoleInput{}
 	input.RoleName = r.ko.Spec.Name
-	inTagKeys := []*string{}
+	inTagKeys := []string{}
 	for _, t := range tags {
-		inTagKeys = append(inTagKeys, t.Key)
+		inTagKeys = append(inTagKeys, *t.Key)
 	}
 	input.TagKeys = inTagKeys
 
-	_, err = rm.sdkapi.UntagRoleWithContext(ctx, input)
+	_, err = rm.sdkapi.UntagRole(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "UntagRole", err)
 	return err
 }

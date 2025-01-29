@@ -28,8 +28,9 @@ import (
 	ackerr "github.com/aws-controllers-k8s/runtime/pkg/errors"
 	ackrequeue "github.com/aws-controllers-k8s/runtime/pkg/requeue"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
-	"github.com/aws/aws-sdk-go/aws"
-	svcsdk "github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
+	smithy "github.com/aws/smithy-go"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -40,8 +41,7 @@ import (
 var (
 	_ = &metav1.Time{}
 	_ = strings.ToLower("")
-	_ = &aws.JSONValue{}
-	_ = &svcsdk.IAM{}
+	_ = &svcsdk.Client{}
 	_ = &svcapitypes.Group{}
 	_ = ackv1alpha1.AWSAccountID("")
 	_ = &ackerr.NotFound
@@ -49,6 +49,7 @@ var (
 	_ = &reflect.Value{}
 	_ = fmt.Sprintf("")
 	_ = &ackrequeue.NoRequeue{}
+	_ = &aws.Config{}
 )
 
 // sdkFind returns SDK-specific information about a supplied resource
@@ -74,13 +75,11 @@ func (rm *resourceManager) sdkFind(
 	}
 
 	var resp *svcsdk.GetGroupOutput
-	resp, err = rm.sdkapi.GetGroupWithContext(ctx, input)
+	resp, err = rm.sdkapi.GetGroup(ctx, input)
 	rm.metrics.RecordAPICall("READ_ONE", "GetGroup", err)
 	if err != nil {
-		if reqErr, ok := ackerr.AWSRequestFailure(err); ok && reqErr.StatusCode() == 404 {
-			return nil, ackerr.NotFound
-		}
-		if awsErr, ok := ackerr.AWSError(err); ok && awsErr.Code() == "NoSuchEntity" {
+		var awsErr smithy.APIError
+		if errors.As(err, &awsErr) && awsErr.ErrorCode() == "NoSuchEntity" {
 			return nil, ackerr.NotFound
 		}
 		return nil, err
@@ -149,7 +148,7 @@ func (rm *resourceManager) newDescribeRequestPayload(
 	res := &svcsdk.GetGroupInput{}
 
 	if r.ko.Spec.Name != nil {
-		res.SetGroupName(*r.ko.Spec.Name)
+		res.GroupName = r.ko.Spec.Name
 	}
 
 	return res, nil
@@ -174,7 +173,7 @@ func (rm *resourceManager) sdkCreate(
 
 	var resp *svcsdk.CreateGroupOutput
 	_ = resp
-	resp, err = rm.sdkapi.CreateGroupWithContext(ctx, input)
+	resp, err = rm.sdkapi.CreateGroup(ctx, input)
 	rm.metrics.RecordAPICall("CREATE", "CreateGroup", err)
 	if err != nil {
 		return nil, err
@@ -228,10 +227,10 @@ func (rm *resourceManager) newCreateRequestPayload(
 	res := &svcsdk.CreateGroupInput{}
 
 	if r.ko.Spec.Name != nil {
-		res.SetGroupName(*r.ko.Spec.Name)
+		res.GroupName = r.ko.Spec.Name
 	}
 	if r.ko.Spec.Path != nil {
-		res.SetPath(*r.ko.Spec.Path)
+		res.Path = r.ko.Spec.Path
 	}
 
 	return res, nil
@@ -284,7 +283,7 @@ func (rm *resourceManager) sdkUpdate(
 
 	var resp *svcsdk.UpdateGroupOutput
 	_ = resp
-	resp, err = rm.sdkapi.UpdateGroupWithContext(ctx, input)
+	resp, err = rm.sdkapi.UpdateGroup(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "UpdateGroup", err)
 	if err != nil {
 		return nil, err
@@ -307,7 +306,7 @@ func (rm *resourceManager) newUpdateRequestPayload(
 	res := &svcsdk.UpdateGroupInput{}
 
 	if r.ko.Spec.Name != nil {
-		res.SetGroupName(*r.ko.Spec.Name)
+		res.GroupName = r.ko.Spec.Name
 	}
 
 	return res, nil
@@ -340,7 +339,7 @@ func (rm *resourceManager) sdkDelete(
 	}
 	var resp *svcsdk.DeleteGroupOutput
 	_ = resp
-	resp, err = rm.sdkapi.DeleteGroupWithContext(ctx, input)
+	resp, err = rm.sdkapi.DeleteGroup(ctx, input)
 	rm.metrics.RecordAPICall("DELETE", "DeleteGroup", err)
 	return nil, err
 }
@@ -353,7 +352,7 @@ func (rm *resourceManager) newDeleteRequestPayload(
 	res := &svcsdk.DeleteGroupInput{}
 
 	if r.ko.Spec.Name != nil {
-		res.SetGroupName(*r.ko.Spec.Name)
+		res.GroupName = r.ko.Spec.Name
 	}
 
 	return res, nil
@@ -461,11 +460,12 @@ func (rm *resourceManager) terminalAWSError(err error) bool {
 	if err == nil {
 		return false
 	}
-	awsErr, ok := ackerr.AWSError(err)
-	if !ok {
+
+	var terminalErr smithy.APIError
+	if !errors.As(err, &terminalErr) {
 		return false
 	}
-	switch awsErr.Code() {
+	switch terminalErr.ErrorCode() {
 	case "InvalidInput",
 		"MalformedPolicyDocument":
 		return true

@@ -18,59 +18,66 @@ package v1alpha1
 type AccessAdvisorUsageGranularityType string
 
 const (
-	AccessAdvisorUsageGranularityType_SERVICE_LEVEL AccessAdvisorUsageGranularityType = "SERVICE_LEVEL"
 	AccessAdvisorUsageGranularityType_ACTION_LEVEL  AccessAdvisorUsageGranularityType = "ACTION_LEVEL"
+	AccessAdvisorUsageGranularityType_SERVICE_LEVEL AccessAdvisorUsageGranularityType = "SERVICE_LEVEL"
 )
 
 type AssignmentStatusType string
 
 const (
+	AssignmentStatusType_Any        AssignmentStatusType = "Any"
 	AssignmentStatusType_Assigned   AssignmentStatusType = "Assigned"
 	AssignmentStatusType_Unassigned AssignmentStatusType = "Unassigned"
-	AssignmentStatusType_Any        AssignmentStatusType = "Any"
 )
 
 type ContextKeyTypeEnum string
 
 const (
-	ContextKeyTypeEnum_string      ContextKeyTypeEnum = "string"
-	ContextKeyTypeEnum_stringList  ContextKeyTypeEnum = "stringList"
-	ContextKeyTypeEnum_numeric     ContextKeyTypeEnum = "numeric"
-	ContextKeyTypeEnum_numericList ContextKeyTypeEnum = "numericList"
-	ContextKeyTypeEnum_boolean     ContextKeyTypeEnum = "boolean"
-	ContextKeyTypeEnum_booleanList ContextKeyTypeEnum = "booleanList"
-	ContextKeyTypeEnum_ip          ContextKeyTypeEnum = "ip"
-	ContextKeyTypeEnum_ipList      ContextKeyTypeEnum = "ipList"
 	ContextKeyTypeEnum_binary      ContextKeyTypeEnum = "binary"
 	ContextKeyTypeEnum_binaryList  ContextKeyTypeEnum = "binaryList"
+	ContextKeyTypeEnum_boolean     ContextKeyTypeEnum = "boolean"
+	ContextKeyTypeEnum_booleanList ContextKeyTypeEnum = "booleanList"
 	ContextKeyTypeEnum_date        ContextKeyTypeEnum = "date"
 	ContextKeyTypeEnum_dateList    ContextKeyTypeEnum = "dateList"
+	ContextKeyTypeEnum_ip          ContextKeyTypeEnum = "ip"
+	ContextKeyTypeEnum_ipList      ContextKeyTypeEnum = "ipList"
+	ContextKeyTypeEnum_numeric     ContextKeyTypeEnum = "numeric"
+	ContextKeyTypeEnum_numericList ContextKeyTypeEnum = "numericList"
+	ContextKeyTypeEnum_string      ContextKeyTypeEnum = "string"
+	ContextKeyTypeEnum_stringList  ContextKeyTypeEnum = "stringList"
 )
 
 type DeletionTaskStatusType string
 
 const (
-	DeletionTaskStatusType_SUCCEEDED   DeletionTaskStatusType = "SUCCEEDED"
-	DeletionTaskStatusType_IN_PROGRESS DeletionTaskStatusType = "IN_PROGRESS"
 	DeletionTaskStatusType_FAILED      DeletionTaskStatusType = "FAILED"
+	DeletionTaskStatusType_IN_PROGRESS DeletionTaskStatusType = "IN_PROGRESS"
 	DeletionTaskStatusType_NOT_STARTED DeletionTaskStatusType = "NOT_STARTED"
+	DeletionTaskStatusType_SUCCEEDED   DeletionTaskStatusType = "SUCCEEDED"
 )
 
 type EncodingType string
 
 const (
-	EncodingType_SSH EncodingType = "SSH"
 	EncodingType_PEM EncodingType = "PEM"
+	EncodingType_SSH EncodingType = "SSH"
 )
 
 type EntityType string
 
 const (
-	EntityType_User               EntityType = "User"
-	EntityType_Role               EntityType = "Role"
+	EntityType_AWSManagedPolicy   EntityType = "AWSManagedPolicy"
 	EntityType_Group              EntityType = "Group"
 	EntityType_LocalManagedPolicy EntityType = "LocalManagedPolicy"
-	EntityType_AWSManagedPolicy   EntityType = "AWSManagedPolicy"
+	EntityType_Role               EntityType = "Role"
+	EntityType_User               EntityType = "User"
+)
+
+type FeatureType string
+
+const (
+	FeatureType_RootCredentialsManagement FeatureType = "RootCredentialsManagement"
+	FeatureType_RootSessions              FeatureType = "RootSessions"
 )
 
 type GlobalEndpointTokenVersion string
@@ -83,9 +90,9 @@ const (
 type JobStatusType string
 
 const (
-	JobStatusType_IN_PROGRESS JobStatusType = "IN_PROGRESS"
 	JobStatusType_COMPLETED   JobStatusType = "COMPLETED"
 	JobStatusType_FAILED      JobStatusType = "FAILED"
+	JobStatusType_IN_PROGRESS JobStatusType = "IN_PROGRESS"
 )
 
 type PermissionsBoundaryAttachmentType string
@@ -105,29 +112,29 @@ const (
 type PolicyOwnerEntityType string
 
 const (
-	PolicyOwnerEntityType_USER  PolicyOwnerEntityType = "USER"
-	PolicyOwnerEntityType_ROLE  PolicyOwnerEntityType = "ROLE"
 	PolicyOwnerEntityType_GROUP PolicyOwnerEntityType = "GROUP"
+	PolicyOwnerEntityType_ROLE  PolicyOwnerEntityType = "ROLE"
+	PolicyOwnerEntityType_USER  PolicyOwnerEntityType = "USER"
 )
 
 type PolicyScopeType string
 
 const (
-	PolicyScopeType_All   PolicyScopeType = "All"
 	PolicyScopeType_AWS   PolicyScopeType = "AWS"
+	PolicyScopeType_All   PolicyScopeType = "All"
 	PolicyScopeType_Local PolicyScopeType = "Local"
 )
 
 type PolicySourceType string
 
 const (
-	PolicySourceType_user         PolicySourceType = "user"
-	PolicySourceType_group        PolicySourceType = "group"
-	PolicySourceType_role         PolicySourceType = "role"
 	PolicySourceType_aws_managed  PolicySourceType = "aws-managed"
-	PolicySourceType_user_managed PolicySourceType = "user-managed"
-	PolicySourceType_resource     PolicySourceType = "resource"
+	PolicySourceType_group        PolicySourceType = "group"
 	PolicySourceType_none         PolicySourceType = "none"
+	PolicySourceType_resource     PolicySourceType = "resource"
+	PolicySourceType_role         PolicySourceType = "role"
+	PolicySourceType_user         PolicySourceType = "user"
+	PolicySourceType_user_managed PolicySourceType = "user-managed"
 )
 
 type PolicyType string
@@ -140,8 +147,8 @@ const (
 type PolicyUsageType string
 
 const (
-	PolicyUsageType_PermissionsPolicy   PolicyUsageType = "PermissionsPolicy"
 	PolicyUsageType_PermissionsBoundary PolicyUsageType = "PermissionsBoundary"
+	PolicyUsageType_PermissionsPolicy   PolicyUsageType = "PermissionsPolicy"
 )
 
 type ReportFormatType string
@@ -153,18 +160,18 @@ const (
 type ReportStateType string
 
 const (
-	ReportStateType_STARTED    ReportStateType = "STARTED"
-	ReportStateType_INPROGRESS ReportStateType = "INPROGRESS"
 	ReportStateType_COMPLETE   ReportStateType = "COMPLETE"
+	ReportStateType_INPROGRESS ReportStateType = "INPROGRESS"
+	ReportStateType_STARTED    ReportStateType = "STARTED"
 )
 
 type SortKeyType string
 
 const (
-	SortKeyType_SERVICE_NAMESPACE_ASCENDING        SortKeyType = "SERVICE_NAMESPACE_ASCENDING"
-	SortKeyType_SERVICE_NAMESPACE_DESCENDING       SortKeyType = "SERVICE_NAMESPACE_DESCENDING"
 	SortKeyType_LAST_AUTHENTICATED_TIME_ASCENDING  SortKeyType = "LAST_AUTHENTICATED_TIME_ASCENDING"
 	SortKeyType_LAST_AUTHENTICATED_TIME_DESCENDING SortKeyType = "LAST_AUTHENTICATED_TIME_DESCENDING"
+	SortKeyType_SERVICE_NAMESPACE_ASCENDING        SortKeyType = "SERVICE_NAMESPACE_ASCENDING"
+	SortKeyType_SERVICE_NAMESPACE_DESCENDING       SortKeyType = "SERVICE_NAMESPACE_DESCENDING"
 )
 
 type StatusType string
@@ -177,30 +184,31 @@ const (
 type SummaryKeyType string
 
 const (
-	SummaryKeyType_Users                             SummaryKeyType = "Users"
-	SummaryKeyType_UsersQuota                        SummaryKeyType = "UsersQuota"
-	SummaryKeyType_Groups                            SummaryKeyType = "Groups"
-	SummaryKeyType_GroupsQuota                       SummaryKeyType = "GroupsQuota"
-	SummaryKeyType_ServerCertificates                SummaryKeyType = "ServerCertificates"
-	SummaryKeyType_ServerCertificatesQuota           SummaryKeyType = "ServerCertificatesQuota"
-	SummaryKeyType_UserPolicySizeQuota               SummaryKeyType = "UserPolicySizeQuota"
-	SummaryKeyType_GroupPolicySizeQuota              SummaryKeyType = "GroupPolicySizeQuota"
-	SummaryKeyType_GroupsPerUserQuota                SummaryKeyType = "GroupsPerUserQuota"
-	SummaryKeyType_SigningCertificatesPerUserQuota   SummaryKeyType = "SigningCertificatesPerUserQuota"
 	SummaryKeyType_AccessKeysPerUserQuota            SummaryKeyType = "AccessKeysPerUserQuota"
-	SummaryKeyType_MFADevices                        SummaryKeyType = "MFADevices"
-	SummaryKeyType_MFADevicesInUse                   SummaryKeyType = "MFADevicesInUse"
-	SummaryKeyType_AccountMFAEnabled                 SummaryKeyType = "AccountMFAEnabled"
 	SummaryKeyType_AccountAccessKeysPresent          SummaryKeyType = "AccountAccessKeysPresent"
+	SummaryKeyType_AccountMFAEnabled                 SummaryKeyType = "AccountMFAEnabled"
+	SummaryKeyType_AccountPasswordPresent            SummaryKeyType = "AccountPasswordPresent"
 	SummaryKeyType_AccountSigningCertificatesPresent SummaryKeyType = "AccountSigningCertificatesPresent"
 	SummaryKeyType_AttachedPoliciesPerGroupQuota     SummaryKeyType = "AttachedPoliciesPerGroupQuota"
 	SummaryKeyType_AttachedPoliciesPerRoleQuota      SummaryKeyType = "AttachedPoliciesPerRoleQuota"
 	SummaryKeyType_AttachedPoliciesPerUserQuota      SummaryKeyType = "AttachedPoliciesPerUserQuota"
+	SummaryKeyType_GlobalEndpointTokenVersion        SummaryKeyType = "GlobalEndpointTokenVersion"
+	SummaryKeyType_GroupPolicySizeQuota              SummaryKeyType = "GroupPolicySizeQuota"
+	SummaryKeyType_Groups                            SummaryKeyType = "Groups"
+	SummaryKeyType_GroupsPerUserQuota                SummaryKeyType = "GroupsPerUserQuota"
+	SummaryKeyType_GroupsQuota                       SummaryKeyType = "GroupsQuota"
+	SummaryKeyType_MFADevices                        SummaryKeyType = "MFADevices"
+	SummaryKeyType_MFADevicesInUse                   SummaryKeyType = "MFADevicesInUse"
 	SummaryKeyType_Policies                          SummaryKeyType = "Policies"
 	SummaryKeyType_PoliciesQuota                     SummaryKeyType = "PoliciesQuota"
 	SummaryKeyType_PolicySizeQuota                   SummaryKeyType = "PolicySizeQuota"
 	SummaryKeyType_PolicyVersionsInUse               SummaryKeyType = "PolicyVersionsInUse"
 	SummaryKeyType_PolicyVersionsInUseQuota          SummaryKeyType = "PolicyVersionsInUseQuota"
+	SummaryKeyType_ServerCertificates                SummaryKeyType = "ServerCertificates"
+	SummaryKeyType_ServerCertificatesQuota           SummaryKeyType = "ServerCertificatesQuota"
+	SummaryKeyType_SigningCertificatesPerUserQuota   SummaryKeyType = "SigningCertificatesPerUserQuota"
+	SummaryKeyType_UserPolicySizeQuota               SummaryKeyType = "UserPolicySizeQuota"
+	SummaryKeyType_Users                             SummaryKeyType = "Users"
+	SummaryKeyType_UsersQuota                        SummaryKeyType = "UsersQuota"
 	SummaryKeyType_VersionsPerPolicyQuota            SummaryKeyType = "VersionsPerPolicyQuota"
-	SummaryKeyType_GlobalEndpointTokenVersion        SummaryKeyType = "GlobalEndpointTokenVersion"
 )
