@@ -20,7 +20,8 @@ import (
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
 	ackutil "github.com/aws-controllers-k8s/runtime/pkg/util"
-	svcsdk "github.com/aws/aws-sdk-go/service/iam"
+	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
+	svcsdktypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/samber/lo"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
@@ -41,7 +42,7 @@ func (rm *resourceManager) putUserPermissionsBoundary(
 		UserName:            r.ko.Spec.Name,
 		PermissionsBoundary: r.ko.Spec.PermissionsBoundary,
 	}
-	_, err = rm.sdkapi.PutUserPermissionsBoundaryWithContext(ctx, input)
+	_, err = rm.sdkapi.PutUserPermissionsBoundary(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "PutUserPermissionsBoundary", err)
 	return err
 }
@@ -57,7 +58,7 @@ func (rm *resourceManager) deleteUserPermissionsBoundary(
 	defer func() { exit(err) }()
 
 	input := &svcsdk.DeleteUserPermissionsBoundaryInput{UserName: r.ko.Spec.Name}
-	_, err = rm.sdkapi.DeleteUserPermissionsBoundaryWithContext(ctx, input)
+	_, err = rm.sdkapi.DeleteUserPermissionsBoundary(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "DeleteUserPermissionsBoundary", err)
 	return err
 }
@@ -140,17 +141,16 @@ func (rm *resourceManager) getManagedPolicies(
 	input.UserName = r.ko.Spec.Name
 	res := []*string{}
 
-	err = rm.sdkapi.ListAttachedUserPoliciesPagesWithContext(
-		ctx, input, func(page *svcsdk.ListAttachedUserPoliciesOutput, _ bool) bool {
-			if page == nil {
-				return true
-			}
-			for _, p := range page.AttachedPolicies {
-				res = append(res, p.PolicyArn)
-			}
-			return page.IsTruncated != nil && *page.IsTruncated
-		},
-	)
+	paginator := svcsdk.NewListAttachedUserPoliciesPaginator(rm.sdkapi, input)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range page.AttachedPolicies {
+			res = append(res, p.PolicyArn)
+		}
+	}
 	rm.metrics.RecordAPICall("READ_MANY", "ListAttachedUserPolicies", err)
 	return res, err
 }
@@ -171,7 +171,7 @@ func (rm *resourceManager) addManagedPolicy(
 	input := &svcsdk.AttachUserPolicyInput{}
 	input.UserName = r.ko.Spec.Name
 	input.PolicyArn = policyARN
-	_, err = rm.sdkapi.AttachUserPolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.AttachUserPolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "AttachUserPolicy", err)
 	return err
 }
@@ -191,7 +191,7 @@ func (rm *resourceManager) removeManagedPolicy(
 	input := &svcsdk.DetachUserPolicyInput{}
 	input.UserName = r.ko.Spec.Name
 	input.PolicyArn = policyARN
-	_, err = rm.sdkapi.DetachUserPolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.DetachUserPolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "DetachUserPolicy", err)
 	return err
 }
@@ -277,17 +277,16 @@ func (rm *resourceManager) getInlinePolicies(
 	input.UserName = userName
 	res := map[string]*string{}
 
-	err = rm.sdkapi.ListUserPoliciesPagesWithContext(
-		ctx, input, func(page *svcsdk.ListUserPoliciesOutput, _ bool) bool {
-			if page == nil {
-				return true
-			}
-			for _, p := range page.PolicyNames {
-				res[*p] = nil
-			}
-			return page.IsTruncated != nil && *page.IsTruncated
-		},
-	)
+	paginator := svcsdk.NewListUserPoliciesPaginator(rm.sdkapi, input)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range page.PolicyNames {
+			res[p] = nil // Note: p is now a string, not *string
+		}
+	}
 	rm.metrics.RecordAPICall("READ_MANY", "ListUserPolicies", err)
 
 	// Now we need to grab the policy documents for each policy name
@@ -295,7 +294,7 @@ func (rm *resourceManager) getInlinePolicies(
 		input := &svcsdk.GetUserPolicyInput{}
 		input.UserName = userName
 		input.PolicyName = &polName
-		resp, err := rm.sdkapi.GetUserPolicyWithContext(ctx, input)
+		resp, err := rm.sdkapi.GetUserPolicy(ctx, input)
 		rm.metrics.RecordAPICall("READ_ONE", "GetUserPolicy", err)
 		if err != nil {
 			return nil, err
@@ -330,7 +329,7 @@ func (rm *resourceManager) addInlinePolicy(
 		return err
 	}
 	input.PolicyDocument = &cleanedDoc
-	_, err = rm.sdkapi.PutUserPolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.PutUserPolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "PutUserPolicy", err)
 	return err
 }
@@ -349,7 +348,7 @@ func (rm *resourceManager) removeInlinePolicy(
 	input := &svcsdk.DeleteUserPolicyInput{}
 	input.UserName = r.ko.Spec.Name
 	input.PolicyName = &policyName
-	_, err = rm.sdkapi.DeleteUserPolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.DeleteUserPolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "DeleteUserPolicy", err)
 	return err
 }
@@ -456,14 +455,14 @@ func (rm *resourceManager) getTags(
 	res := []*svcapitypes.Tag{}
 
 	for {
-		resp, err = rm.sdkapi.ListUserTagsWithContext(ctx, input)
+		resp, err = rm.sdkapi.ListUserTags(ctx, input)
 		if err != nil || resp == nil {
 			break
 		}
 		for _, t := range resp.Tags {
 			res = append(res, &svcapitypes.Tag{Key: t.Key, Value: t.Value})
 		}
-		if resp.IsTruncated != nil && !*resp.IsTruncated {
+		if !resp.IsTruncated {
 			break
 		}
 	}
@@ -483,13 +482,13 @@ func (rm *resourceManager) addTags(
 
 	input := &svcsdk.TagUserInput{}
 	input.UserName = r.ko.Spec.Name
-	inTags := []*svcsdk.Tag{}
+	inTags := []svcsdktypes.Tag{}
 	for _, t := range tags {
-		inTags = append(inTags, &svcsdk.Tag{Key: t.Key, Value: t.Value})
+		inTags = append(inTags, svcsdktypes.Tag{Key: t.Key, Value: t.Value})
 	}
 	input.Tags = inTags
 
-	_, err = rm.sdkapi.TagUserWithContext(ctx, input)
+	_, err = rm.sdkapi.TagUser(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "TagUser", err)
 	return err
 }
@@ -508,13 +507,13 @@ func (rm *resourceManager) removeTags(
 
 	input := &svcsdk.UntagUserInput{}
 	input.UserName = r.ko.Spec.Name
-	inTagKeys := []*string{}
+	inTagKeys := []string{}
 	for _, t := range tags {
-		inTagKeys = append(inTagKeys, t.Key)
+		inTagKeys = append(inTagKeys, *t.Key)
 	}
 	input.TagKeys = inTagKeys
 
-	_, err = rm.sdkapi.UntagUserWithContext(ctx, input)
+	_, err = rm.sdkapi.UntagUser(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "UntagUser", err)
 	return err
 }

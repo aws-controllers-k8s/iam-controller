@@ -22,7 +22,8 @@ import (
 	ackcondition "github.com/aws-controllers-k8s/runtime/pkg/condition"
 	ackerr "github.com/aws-controllers-k8s/runtime/pkg/errors"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
-	svcsdk "github.com/aws/aws-sdk-go/service/iam"
+	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
+	svcsdktypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	corev1 "k8s.io/api/core/v1"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
@@ -53,7 +54,7 @@ func (rm *resourceManager) customUpdateOpenIDConnectProvider(
 
 		var thumbprintResp *svcsdk.UpdateOpenIDConnectProviderThumbprintOutput
 		_ = thumbprintResp
-		thumbprintResp, err = rm.sdkapi.UpdateOpenIDConnectProviderThumbprintWithContext(ctx, thumbprintInput)
+		thumbprintResp, err = rm.sdkapi.UpdateOpenIDConnectProviderThumbprint(ctx, thumbprintInput)
 		rm.metrics.RecordAPICall("UPDATE", "UpdateOpenIDConnectProviderThumbprint", err)
 		if err != nil {
 			return nil, err
@@ -87,7 +88,7 @@ func (rm *resourceManager) customUpdateOpenIDConnectProvider(
 
 				var addClientIDResp *svcsdk.AddClientIDToOpenIDConnectProviderOutput
 				_ = addClientIDResp
-				addClientIDResp, err = rm.sdkapi.AddClientIDToOpenIDConnectProviderWithContext(ctx, addClientIDInput)
+				addClientIDResp, err = rm.sdkapi.AddClientIDToOpenIDConnectProvider(ctx, addClientIDInput)
 				rm.metrics.RecordAPICall("UPDATE", "AddClientIDToOpenIDConnectProvider", err)
 				if err != nil {
 					return nil, err
@@ -106,7 +107,7 @@ func (rm *resourceManager) customUpdateOpenIDConnectProvider(
 
 			var removeClientIDResp *svcsdk.RemoveClientIDFromOpenIDConnectProviderOutput
 			_ = removeClientIDResp
-			removeClientIDResp, err = rm.sdkapi.RemoveClientIDFromOpenIDConnectProviderWithContext(ctx, removeClientIDInput)
+			removeClientIDResp, err = rm.sdkapi.RemoveClientIDFromOpenIDConnectProvider(ctx, removeClientIDInput)
 			rm.metrics.RecordAPICall("UPDATE", "RemoveClientIDFromOpenIDConnectProvider", err)
 			if err != nil {
 				return nil, err
@@ -244,17 +245,17 @@ func (rm *resourceManager) getTags(
 	res := []*svcapitypes.Tag{}
 
 	for {
-		resp, err = rm.sdkapi.ListOpenIDConnectProviderTagsWithContext(ctx, input)
+		resp, err = rm.sdkapi.ListOpenIDConnectProviderTags(ctx, input)
 		if err != nil || resp == nil {
 			break
 		}
 		for _, t := range resp.Tags {
 			res = append(res, &svcapitypes.Tag{Key: t.Key, Value: t.Value})
 		}
-		if resp.IsTruncated != nil && !*resp.IsTruncated {
+		if !resp.IsTruncated {
 			break
 		}
-		input.SetMarker(*resp.Marker)
+		input.Marker = resp.Marker
 		rm.metrics.RecordAPICall("READ_MANY", "ListOpenIDConnectProviderTags", err)
 	}
 	return res, err
@@ -272,13 +273,13 @@ func (rm *resourceManager) addTags(
 
 	input := &svcsdk.TagOpenIDConnectProviderInput{}
 	input.OpenIDConnectProviderArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
-	inTags := []*svcsdk.Tag{}
+	inTags := []svcsdktypes.Tag{}
 	for _, t := range tags {
-		inTags = append(inTags, &svcsdk.Tag{Key: t.Key, Value: t.Value})
+		inTags = append(inTags, svcsdktypes.Tag{Key: t.Key, Value: t.Value})
 	}
 	input.Tags = inTags
 
-	_, err = rm.sdkapi.TagOpenIDConnectProviderWithContext(ctx, input)
+	_, err = rm.sdkapi.TagOpenIDConnectProvider(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "TagOpenIDConnectProvider", err)
 	return err
 }
@@ -295,13 +296,13 @@ func (rm *resourceManager) removeTags(
 
 	input := &svcsdk.UntagOpenIDConnectProviderInput{}
 	input.OpenIDConnectProviderArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
-	inTagKeys := []*string{}
+	inTagKeys := []string{}
 	for _, t := range tags {
-		inTagKeys = append(inTagKeys, t.Key)
+		inTagKeys = append(inTagKeys, *t.Key)
 	}
 	input.TagKeys = inTagKeys
 
-	_, err = rm.sdkapi.UntagOpenIDConnectProviderWithContext(ctx, input)
+	_, err = rm.sdkapi.UntagOpenIDConnectProvider(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "UntagOpenIDConnectProvider", err)
 	return err
 }
@@ -315,10 +316,15 @@ func (rm *resourceManager) newUpdateThumbprintRequestPayload(
 	res := &svcsdk.UpdateOpenIDConnectProviderThumbprintInput{}
 
 	if r.ko.Spec.Thumbprints != nil {
-		res.SetThumbprintList(r.ko.Spec.Thumbprints)
+		thumbprints := []string{}
+		for _, thumbprint := range r.ko.Spec.Thumbprints {
+			thumbprints = append(thumbprints, *thumbprint)
+		}
+		res.ThumbprintList = thumbprints
 	}
 	if r.ko.Status.ACKResourceMetadata.ARN != nil {
-		res.SetOpenIDConnectProviderArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
+		arnStr := string(*r.ko.Status.ACKResourceMetadata.ARN)
+		res.OpenIDConnectProviderArn = &arnStr
 	}
 
 	return res, nil
@@ -334,10 +340,11 @@ func (rm *resourceManager) newAddClientIDRequestPayload(
 	res := &svcsdk.AddClientIDToOpenIDConnectProviderInput{}
 
 	if clientId != nil {
-		res.SetClientID(*clientId)
+		res.ClientID = clientId
 	}
 	if r.ko.Status.ACKResourceMetadata.ARN != nil {
-		res.SetOpenIDConnectProviderArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
+		arnStr := string(*r.ko.Status.ACKResourceMetadata.ARN)
+		res.OpenIDConnectProviderArn = &arnStr
 	}
 
 	return res, nil
@@ -353,10 +360,11 @@ func (rm *resourceManager) newRemoveClientIDRequestPayload(
 	res := &svcsdk.RemoveClientIDFromOpenIDConnectProviderInput{}
 
 	if clientId != nil {
-		res.SetClientID(*clientId)
+		res.ClientID = clientId
 	}
 	if r.ko.Status.ACKResourceMetadata.ARN != nil {
-		res.SetOpenIDConnectProviderArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
+		arnStr := string(*r.ko.Status.ACKResourceMetadata.ARN)
+		res.OpenIDConnectProviderArn = &arnStr
 	}
 
 	return res, nil
