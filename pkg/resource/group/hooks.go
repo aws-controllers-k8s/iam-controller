@@ -19,7 +19,7 @@ import (
 
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
 	ackutil "github.com/aws-controllers-k8s/runtime/pkg/util"
-	svcsdk "github.com/aws/aws-sdk-go/service/iam"
+	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/samber/lo"
 
 	commonutil "github.com/aws-controllers-k8s/iam-controller/pkg/util"
@@ -86,17 +86,16 @@ func (rm *resourceManager) getManagedPolicies(
 	input.GroupName = r.ko.Spec.Name
 	res := []*string{}
 
-	err = rm.sdkapi.ListAttachedGroupPoliciesPagesWithContext(
-		ctx, input, func(page *svcsdk.ListAttachedGroupPoliciesOutput, _ bool) bool {
-			if page == nil {
-				return true
-			}
-			for _, p := range page.AttachedPolicies {
-				res = append(res, p.PolicyArn)
-			}
-			return page.IsTruncated != nil && *page.IsTruncated
-		},
-	)
+	paginator := svcsdk.NewListAttachedGroupPoliciesPaginator(rm.sdkapi, input)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range page.AttachedPolicies {
+			res = append(res, p.PolicyArn)
+		}
+	}
 	rm.metrics.RecordAPICall("READ_MANY", "ListAttachedGroupPolicies", err)
 	return res, err
 }
@@ -115,7 +114,7 @@ func (rm *resourceManager) addManagedPolicy(
 	input := &svcsdk.AttachGroupPolicyInput{}
 	input.GroupName = r.ko.Spec.Name
 	input.PolicyArn = policyARN
-	_, err = rm.sdkapi.AttachGroupPolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.AttachGroupPolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "AttachGroupPolicy", err)
 	return err
 }
@@ -134,7 +133,7 @@ func (rm *resourceManager) removeManagedPolicy(
 	input := &svcsdk.DetachGroupPolicyInput{}
 	input.GroupName = r.ko.Spec.Name
 	input.PolicyArn = policyARN
-	_, err = rm.sdkapi.DetachGroupPolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.DetachGroupPolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "DetachGroupPolicy", err)
 	return err
 }
@@ -220,17 +219,16 @@ func (rm *resourceManager) getInlinePolicies(
 	input.GroupName = groupName
 	res := map[string]*string{}
 
-	err = rm.sdkapi.ListGroupPoliciesPagesWithContext(
-		ctx, input, func(page *svcsdk.ListGroupPoliciesOutput, _ bool) bool {
-			if page == nil {
-				return true
-			}
-			for _, p := range page.PolicyNames {
-				res[*p] = nil
-			}
-			return page.IsTruncated != nil && *page.IsTruncated
-		},
-	)
+	paginator := svcsdk.NewListGroupPoliciesPaginator(rm.sdkapi, input)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range page.PolicyNames {
+			res[p] = nil
+		}
+	}
 	rm.metrics.RecordAPICall("READ_MANY", "ListGroupPolicies", err)
 
 	// Now we need to grab the policy documents for each policy name
@@ -238,7 +236,7 @@ func (rm *resourceManager) getInlinePolicies(
 		input := &svcsdk.GetGroupPolicyInput{}
 		input.GroupName = groupName
 		input.PolicyName = &polName
-		resp, err := rm.sdkapi.GetGroupPolicyWithContext(ctx, input)
+		resp, err := rm.sdkapi.GetGroupPolicy(ctx, input)
 		rm.metrics.RecordAPICall("READ_ONE", "GetGroupPolicy", err)
 		if err != nil {
 			return nil, err
@@ -273,7 +271,7 @@ func (rm *resourceManager) addInlinePolicy(
 		return err
 	}
 	input.PolicyDocument = &cleanedDoc
-	_, err = rm.sdkapi.PutGroupPolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.PutGroupPolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "PutGroupPolicy", err)
 	return err
 }
@@ -292,7 +290,7 @@ func (rm *resourceManager) removeInlinePolicy(
 	input := &svcsdk.DeleteGroupPolicyInput{}
 	input.GroupName = r.ko.Spec.Name
 	input.PolicyName = &policyName
-	_, err = rm.sdkapi.DeleteGroupPolicyWithContext(ctx, input)
+	_, err = rm.sdkapi.DeleteGroupPolicy(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "DeleteGroupPolicy", err)
 	return err
 }

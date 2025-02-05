@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 
@@ -28,8 +29,10 @@ import (
 	ackerr "github.com/aws-controllers-k8s/runtime/pkg/errors"
 	ackrequeue "github.com/aws-controllers-k8s/runtime/pkg/requeue"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
-	"github.com/aws/aws-sdk-go/aws"
-	svcsdk "github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
+	svcsdktypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
+	smithy "github.com/aws/smithy-go"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -40,8 +43,7 @@ import (
 var (
 	_ = &metav1.Time{}
 	_ = strings.ToLower("")
-	_ = &aws.JSONValue{}
-	_ = &svcsdk.IAM{}
+	_ = &svcsdk.Client{}
 	_ = &svcapitypes.Role{}
 	_ = ackv1alpha1.AWSAccountID("")
 	_ = &ackerr.NotFound
@@ -49,6 +51,7 @@ var (
 	_ = &reflect.Value{}
 	_ = fmt.Sprintf("")
 	_ = &ackrequeue.NoRequeue{}
+	_ = &aws.Config{}
 )
 
 // sdkFind returns SDK-specific information about a supplied resource
@@ -74,13 +77,11 @@ func (rm *resourceManager) sdkFind(
 	}
 
 	var resp *svcsdk.GetRoleOutput
-	resp, err = rm.sdkapi.GetRoleWithContext(ctx, input)
+	resp, err = rm.sdkapi.GetRole(ctx, input)
 	rm.metrics.RecordAPICall("READ_ONE", "GetRole", err)
 	if err != nil {
-		if reqErr, ok := ackerr.AWSRequestFailure(err); ok && reqErr.StatusCode() == 404 {
-			return nil, ackerr.NotFound
-		}
-		if awsErr, ok := ackerr.AWSError(err); ok && awsErr.Code() == "NoSuchEntity" {
+		var awsErr smithy.APIError
+		if errors.As(err, &awsErr) && awsErr.ErrorCode() == "NoSuchEntity" {
 			return nil, ackerr.NotFound
 		}
 		return nil, err
@@ -113,7 +114,8 @@ func (rm *resourceManager) sdkFind(
 		ko.Spec.Description = nil
 	}
 	if resp.Role.MaxSessionDuration != nil {
-		ko.Spec.MaxSessionDuration = resp.Role.MaxSessionDuration
+		maxSessionDurationCopy := int64(*resp.Role.MaxSessionDuration)
+		ko.Spec.MaxSessionDuration = &maxSessionDurationCopy
 	} else {
 		ko.Spec.MaxSessionDuration = nil
 	}
@@ -208,7 +210,7 @@ func (rm *resourceManager) newDescribeRequestPayload(
 	res := &svcsdk.GetRoleInput{}
 
 	if r.ko.Spec.Name != nil {
-		res.SetRoleName(*r.ko.Spec.Name)
+		res.RoleName = r.ko.Spec.Name
 	}
 
 	return res, nil
@@ -233,7 +235,7 @@ func (rm *resourceManager) sdkCreate(
 
 	var resp *svcsdk.CreateRoleOutput
 	_ = resp
-	resp, err = rm.sdkapi.CreateRoleWithContext(ctx, input)
+	resp, err = rm.sdkapi.CreateRole(ctx, input)
 	rm.metrics.RecordAPICall("CREATE", "CreateRole", err)
 	if err != nil {
 		return nil, err
@@ -260,7 +262,8 @@ func (rm *resourceManager) sdkCreate(
 		ko.Status.CreateDate = nil
 	}
 	if resp.Role.MaxSessionDuration != nil {
-		ko.Spec.MaxSessionDuration = resp.Role.MaxSessionDuration
+		maxSessionDurationCopy := int64(*resp.Role.MaxSessionDuration)
+		ko.Spec.MaxSessionDuration = &maxSessionDurationCopy
 	} else {
 		ko.Spec.MaxSessionDuration = nil
 	}
@@ -335,36 +338,41 @@ func (rm *resourceManager) newCreateRequestPayload(
 	res := &svcsdk.CreateRoleInput{}
 
 	if r.ko.Spec.AssumeRolePolicyDocument != nil {
-		res.SetAssumeRolePolicyDocument(*r.ko.Spec.AssumeRolePolicyDocument)
+		res.AssumeRolePolicyDocument = r.ko.Spec.AssumeRolePolicyDocument
 	}
 	if r.ko.Spec.Description != nil {
-		res.SetDescription(*r.ko.Spec.Description)
+		res.Description = r.ko.Spec.Description
 	}
 	if r.ko.Spec.MaxSessionDuration != nil {
-		res.SetMaxSessionDuration(*r.ko.Spec.MaxSessionDuration)
+		maxSessionDurationCopy0 := *r.ko.Spec.MaxSessionDuration
+		if maxSessionDurationCopy0 > math.MaxInt32 || maxSessionDurationCopy0 < math.MinInt32 {
+			return nil, fmt.Errorf("error: field MaxSessionDuration is of type int32")
+		}
+		maxSessionDurationCopy := int32(maxSessionDurationCopy0)
+		res.MaxSessionDuration = &maxSessionDurationCopy
 	}
 	if r.ko.Spec.Path != nil {
-		res.SetPath(*r.ko.Spec.Path)
+		res.Path = r.ko.Spec.Path
 	}
 	if r.ko.Spec.PermissionsBoundary != nil {
-		res.SetPermissionsBoundary(*r.ko.Spec.PermissionsBoundary)
+		res.PermissionsBoundary = r.ko.Spec.PermissionsBoundary
 	}
 	if r.ko.Spec.Name != nil {
-		res.SetRoleName(*r.ko.Spec.Name)
+		res.RoleName = r.ko.Spec.Name
 	}
 	if r.ko.Spec.Tags != nil {
-		f6 := []*svcsdk.Tag{}
+		f6 := []svcsdktypes.Tag{}
 		for _, f6iter := range r.ko.Spec.Tags {
-			f6elem := &svcsdk.Tag{}
+			f6elem := &svcsdktypes.Tag{}
 			if f6iter.Key != nil {
-				f6elem.SetKey(*f6iter.Key)
+				f6elem.Key = f6iter.Key
 			}
 			if f6iter.Value != nil {
-				f6elem.SetValue(*f6iter.Value)
+				f6elem.Value = f6iter.Value
 			}
-			f6 = append(f6, f6elem)
+			f6 = append(f6, *f6elem)
 		}
-		res.SetTags(f6)
+		res.Tags = f6
 	}
 
 	return res, nil
@@ -424,7 +432,7 @@ func (rm *resourceManager) sdkUpdate(
 
 	var resp *svcsdk.UpdateRoleOutput
 	_ = resp
-	resp, err = rm.sdkapi.UpdateRoleWithContext(ctx, input)
+	resp, err = rm.sdkapi.UpdateRole(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "UpdateRole", err)
 	if err != nil {
 		return nil, err
@@ -447,13 +455,18 @@ func (rm *resourceManager) newUpdateRequestPayload(
 	res := &svcsdk.UpdateRoleInput{}
 
 	if r.ko.Spec.Description != nil {
-		res.SetDescription(*r.ko.Spec.Description)
+		res.Description = r.ko.Spec.Description
 	}
 	if r.ko.Spec.MaxSessionDuration != nil {
-		res.SetMaxSessionDuration(*r.ko.Spec.MaxSessionDuration)
+		maxSessionDurationCopy0 := *r.ko.Spec.MaxSessionDuration
+		if maxSessionDurationCopy0 > math.MaxInt32 || maxSessionDurationCopy0 < math.MinInt32 {
+			return nil, fmt.Errorf("error: field MaxSessionDuration is of type int32")
+		}
+		maxSessionDurationCopy := int32(maxSessionDurationCopy0)
+		res.MaxSessionDuration = &maxSessionDurationCopy
 	}
 	if r.ko.Spec.Name != nil {
-		res.SetRoleName(*r.ko.Spec.Name)
+		res.RoleName = r.ko.Spec.Name
 	}
 
 	return res, nil
@@ -486,7 +499,7 @@ func (rm *resourceManager) sdkDelete(
 	}
 	var resp *svcsdk.DeleteRoleOutput
 	_ = resp
-	resp, err = rm.sdkapi.DeleteRoleWithContext(ctx, input)
+	resp, err = rm.sdkapi.DeleteRole(ctx, input)
 	rm.metrics.RecordAPICall("DELETE", "DeleteRole", err)
 	return nil, err
 }
@@ -499,7 +512,7 @@ func (rm *resourceManager) newDeleteRequestPayload(
 	res := &svcsdk.DeleteRoleInput{}
 
 	if r.ko.Spec.Name != nil {
-		res.SetRoleName(*r.ko.Spec.Name)
+		res.RoleName = r.ko.Spec.Name
 	}
 
 	return res, nil
@@ -607,11 +620,12 @@ func (rm *resourceManager) terminalAWSError(err error) bool {
 	if err == nil {
 		return false
 	}
-	awsErr, ok := ackerr.AWSError(err)
-	if !ok {
+
+	var terminalErr smithy.APIError
+	if !errors.As(err, &terminalErr) {
 		return false
 	}
-	switch awsErr.Code() {
+	switch terminalErr.ErrorCode() {
 	case "InvalidInput",
 		"MalformedPolicyDocument":
 		return true

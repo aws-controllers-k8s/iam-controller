@@ -49,11 +49,14 @@ type OpenIDConnectProviderSpec struct {
 	// lets you maintain multiple thumbprints if the identity provider is rotating
 	// certificates.
 	//
+	// This parameter is optional. If it is not included, IAM will retrieve and
+	// use the top intermediate certificate authority (CA) thumbprint of the OpenID
+	// Connect identity provider server certificate.
+	//
 	// The server certificate thumbprint is the hex-encoded SHA-1 hash value of
 	// the X.509 certificate used by the domain where the OpenID Connect provider
 	// makes its keys available. It is always a 40-character string.
 	//
-	// You must provide at least one thumbprint when creating an IAM OIDC provider.
 	// For example, assume that the OIDC provider is server.example.com and the
 	// provider stores its keys at https://keys.server.example.com/openid-connect.
 	// In that case, the thumbprint string would be the hex-encoded SHA-1 hash value
@@ -62,8 +65,7 @@ type OpenIDConnectProviderSpec struct {
 	// For more information about obtaining the OIDC provider thumbprint, see Obtaining
 	// the thumbprint for an OpenID Connect provider (https://docs.aws.amazon.com/IAM/latest/UserGuide/identity-providers-oidc-obtain-thumbprint.html)
 	// in the IAM user Guide.
-	// +kubebuilder:validation:Required
-	Thumbprints []*string `json:"thumbprints"`
+	Thumbprints []*string `json:"thumbprints,omitempty"`
 	// The URL of the identity provider. The URL must begin with https:// and should
 	// correspond to the iss claim in the provider's OpenID Connect ID tokens. Per
 	// the OIDC standard, path components are allowed but query parameters are not.

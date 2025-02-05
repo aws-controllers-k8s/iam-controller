@@ -10,7 +10,8 @@ import (
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	ackerr "github.com/aws-controllers-k8s/runtime/pkg/errors"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
-	svcsdk "github.com/aws/aws-sdk-go/service/iam"
+	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
+	svcsdktypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 )
 
 // customUpdateInstanceProfile is the custom implementation for
@@ -97,9 +98,9 @@ func (rm *resourceManager) attachRole(
 	defer func() { exit(err) }()
 
 	input := &svcsdk.AddRoleToInstanceProfileInput{}
-	input.SetInstanceProfileName(*desired.ko.Spec.Name)
-	input.SetRoleName(*desired.ko.Spec.Role)
-	_, err = rm.sdkapi.AddRoleToInstanceProfileWithContext(ctx, input)
+	input.InstanceProfileName = desired.ko.Spec.Name
+	input.RoleName = desired.ko.Spec.Role
+	_, err = rm.sdkapi.AddRoleToInstanceProfile(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "AddRoleToInstanceProfile", err)
 	return err
 }
@@ -114,9 +115,9 @@ func (rm *resourceManager) detachRole(
 	defer func() { exit(err) }()
 
 	input := &svcsdk.RemoveRoleFromInstanceProfileInput{}
-	input.SetInstanceProfileName(*latest.ko.Spec.Name)
-	input.SetRoleName(*latest.ko.Spec.Role)
-	_, err = rm.sdkapi.RemoveRoleFromInstanceProfileWithContext(ctx, input)
+	input.InstanceProfileName = latest.ko.Spec.Name
+	input.RoleName = latest.ko.Spec.Role
+	_, err = rm.sdkapi.RemoveRoleFromInstanceProfile(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "RemoveRoleFromInstanceProfile", err)
 	return err
 }
@@ -195,14 +196,14 @@ func (rm *resourceManager) addTags(
 
 	input := &svcsdk.TagInstanceProfileInput{}
 	input.InstanceProfileName = r.ko.Spec.Name
-	inTags := []*svcsdk.Tag{}
+	inTags := []svcsdktypes.Tag{}
 
 	for _, t := range tags {
-		inTags = append(inTags, &svcsdk.Tag{Key: t.Key, Value: t.Value})
+		inTags = append(inTags, svcsdktypes.Tag{Key: t.Key, Value: t.Value})
 	}
 	input.Tags = inTags
 
-	_, err = rm.sdkapi.TagInstanceProfileWithContext(ctx, input)
+	_, err = rm.sdkapi.TagInstanceProfile(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "TagInstanceProfile", err)
 	return err
 }
@@ -219,14 +220,14 @@ func (rm *resourceManager) removeTags(
 
 	input := &svcsdk.UntagInstanceProfileInput{}
 	input.InstanceProfileName = r.ko.Spec.Name
-	inTagKeys := []*string{}
+	inTagKeys := []string{}
 
 	for _, t := range tags {
-		inTagKeys = append(inTagKeys, t.Key)
+		inTagKeys = append(inTagKeys, *t.Key)
 	}
 	input.TagKeys = inTagKeys
 
-	_, err = rm.sdkapi.UntagInstanceProfileWithContext(ctx, input)
+	_, err = rm.sdkapi.UntagInstanceProfile(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "UntagInstanceProfile", err)
 	return err
 }

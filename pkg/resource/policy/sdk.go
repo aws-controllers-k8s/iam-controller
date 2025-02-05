@@ -28,8 +28,10 @@ import (
 	ackerr "github.com/aws-controllers-k8s/runtime/pkg/errors"
 	ackrequeue "github.com/aws-controllers-k8s/runtime/pkg/requeue"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
-	"github.com/aws/aws-sdk-go/aws"
-	svcsdk "github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
+	svcsdktypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
+	smithy "github.com/aws/smithy-go"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -40,8 +42,7 @@ import (
 var (
 	_ = &metav1.Time{}
 	_ = strings.ToLower("")
-	_ = &aws.JSONValue{}
-	_ = &svcsdk.IAM{}
+	_ = &svcsdk.Client{}
 	_ = &svcapitypes.Policy{}
 	_ = ackv1alpha1.AWSAccountID("")
 	_ = &ackerr.NotFound
@@ -49,6 +50,7 @@ var (
 	_ = &reflect.Value{}
 	_ = fmt.Sprintf("")
 	_ = &ackrequeue.NoRequeue{}
+	_ = &aws.Config{}
 )
 
 // sdkFind returns SDK-specific information about a supplied resource
@@ -74,13 +76,11 @@ func (rm *resourceManager) sdkFind(
 	}
 
 	var resp *svcsdk.GetPolicyOutput
-	resp, err = rm.sdkapi.GetPolicyWithContext(ctx, input)
+	resp, err = rm.sdkapi.GetPolicy(ctx, input)
 	rm.metrics.RecordAPICall("READ_ONE", "GetPolicy", err)
 	if err != nil {
-		if reqErr, ok := ackerr.AWSRequestFailure(err); ok && reqErr.StatusCode() == 404 {
-			return nil, ackerr.NotFound
-		}
-		if awsErr, ok := ackerr.AWSError(err); ok && awsErr.Code() == "NoSuchEntity" {
+		var awsErr smithy.APIError
+		if errors.As(err, &awsErr) && awsErr.ErrorCode() == "NoSuchEntity" {
 			return nil, ackerr.NotFound
 		}
 		return nil, err
@@ -98,7 +98,8 @@ func (rm *resourceManager) sdkFind(
 		ko.Status.ACKResourceMetadata.ARN = &arn
 	}
 	if resp.Policy.AttachmentCount != nil {
-		ko.Status.AttachmentCount = resp.Policy.AttachmentCount
+		attachmentCountCopy := int64(*resp.Policy.AttachmentCount)
+		ko.Status.AttachmentCount = &attachmentCountCopy
 	} else {
 		ko.Status.AttachmentCount = nil
 	}
@@ -117,18 +118,15 @@ func (rm *resourceManager) sdkFind(
 	} else {
 		ko.Spec.Description = nil
 	}
-	if resp.Policy.IsAttachable != nil {
-		ko.Status.IsAttachable = resp.Policy.IsAttachable
-	} else {
-		ko.Status.IsAttachable = nil
-	}
+	ko.Status.IsAttachable = &resp.Policy.IsAttachable
 	if resp.Policy.Path != nil {
 		ko.Spec.Path = resp.Policy.Path
 	} else {
 		ko.Spec.Path = nil
 	}
 	if resp.Policy.PermissionsBoundaryUsageCount != nil {
-		ko.Status.PermissionsBoundaryUsageCount = resp.Policy.PermissionsBoundaryUsageCount
+		permissionsBoundaryUsageCountCopy := int64(*resp.Policy.PermissionsBoundaryUsageCount)
+		ko.Status.PermissionsBoundaryUsageCount = &permissionsBoundaryUsageCountCopy
 	} else {
 		ko.Status.PermissionsBoundaryUsageCount = nil
 	}
@@ -198,7 +196,7 @@ func (rm *resourceManager) newDescribeRequestPayload(
 	res := &svcsdk.GetPolicyInput{}
 
 	if r.ko.Status.ACKResourceMetadata != nil && r.ko.Status.ACKResourceMetadata.ARN != nil {
-		res.SetPolicyArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
+		res.PolicyArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
 	}
 
 	return res, nil
@@ -223,7 +221,7 @@ func (rm *resourceManager) sdkCreate(
 
 	var resp *svcsdk.CreatePolicyOutput
 	_ = resp
-	resp, err = rm.sdkapi.CreatePolicyWithContext(ctx, input)
+	resp, err = rm.sdkapi.CreatePolicy(ctx, input)
 	rm.metrics.RecordAPICall("CREATE", "CreatePolicy", err)
 	if err != nil {
 		return nil, err
@@ -240,7 +238,8 @@ func (rm *resourceManager) sdkCreate(
 		ko.Status.ACKResourceMetadata.ARN = &arn
 	}
 	if resp.Policy.AttachmentCount != nil {
-		ko.Status.AttachmentCount = resp.Policy.AttachmentCount
+		attachmentCountCopy := int64(*resp.Policy.AttachmentCount)
+		ko.Status.AttachmentCount = &attachmentCountCopy
 	} else {
 		ko.Status.AttachmentCount = nil
 	}
@@ -254,18 +253,15 @@ func (rm *resourceManager) sdkCreate(
 	} else {
 		ko.Status.DefaultVersionID = nil
 	}
-	if resp.Policy.IsAttachable != nil {
-		ko.Status.IsAttachable = resp.Policy.IsAttachable
-	} else {
-		ko.Status.IsAttachable = nil
-	}
+	ko.Status.IsAttachable = &resp.Policy.IsAttachable
 	if resp.Policy.Path != nil {
 		ko.Spec.Path = resp.Policy.Path
 	} else {
 		ko.Spec.Path = nil
 	}
 	if resp.Policy.PermissionsBoundaryUsageCount != nil {
-		ko.Status.PermissionsBoundaryUsageCount = resp.Policy.PermissionsBoundaryUsageCount
+		permissionsBoundaryUsageCountCopy := int64(*resp.Policy.PermissionsBoundaryUsageCount)
+		ko.Status.PermissionsBoundaryUsageCount = &permissionsBoundaryUsageCountCopy
 	} else {
 		ko.Status.PermissionsBoundaryUsageCount = nil
 	}
@@ -314,30 +310,30 @@ func (rm *resourceManager) newCreateRequestPayload(
 	res := &svcsdk.CreatePolicyInput{}
 
 	if r.ko.Spec.Description != nil {
-		res.SetDescription(*r.ko.Spec.Description)
+		res.Description = r.ko.Spec.Description
 	}
 	if r.ko.Spec.Path != nil {
-		res.SetPath(*r.ko.Spec.Path)
+		res.Path = r.ko.Spec.Path
 	}
 	if r.ko.Spec.PolicyDocument != nil {
-		res.SetPolicyDocument(*r.ko.Spec.PolicyDocument)
+		res.PolicyDocument = r.ko.Spec.PolicyDocument
 	}
 	if r.ko.Spec.Name != nil {
-		res.SetPolicyName(*r.ko.Spec.Name)
+		res.PolicyName = r.ko.Spec.Name
 	}
 	if r.ko.Spec.Tags != nil {
-		f4 := []*svcsdk.Tag{}
+		f4 := []svcsdktypes.Tag{}
 		for _, f4iter := range r.ko.Spec.Tags {
-			f4elem := &svcsdk.Tag{}
+			f4elem := &svcsdktypes.Tag{}
 			if f4iter.Key != nil {
-				f4elem.SetKey(*f4iter.Key)
+				f4elem.Key = f4iter.Key
 			}
 			if f4iter.Value != nil {
-				f4elem.SetValue(*f4iter.Value)
+				f4elem.Value = f4iter.Value
 			}
-			f4 = append(f4, f4elem)
+			f4 = append(f4, *f4elem)
 		}
-		res.SetTags(f4)
+		res.Tags = f4
 	}
 
 	return res, nil
@@ -379,7 +375,7 @@ func (rm *resourceManager) sdkDelete(
 	}
 	var resp *svcsdk.DeletePolicyOutput
 	_ = resp
-	resp, err = rm.sdkapi.DeletePolicyWithContext(ctx, input)
+	resp, err = rm.sdkapi.DeletePolicy(ctx, input)
 	rm.metrics.RecordAPICall("DELETE", "DeletePolicy", err)
 	return nil, err
 }
@@ -392,7 +388,7 @@ func (rm *resourceManager) newDeleteRequestPayload(
 	res := &svcsdk.DeletePolicyInput{}
 
 	if r.ko.Status.ACKResourceMetadata != nil && r.ko.Status.ACKResourceMetadata.ARN != nil {
-		res.SetPolicyArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
+		res.PolicyArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
 	}
 
 	return res, nil
@@ -500,11 +496,12 @@ func (rm *resourceManager) terminalAWSError(err error) bool {
 	if err == nil {
 		return false
 	}
-	awsErr, ok := ackerr.AWSError(err)
-	if !ok {
+
+	var terminalErr smithy.APIError
+	if !errors.As(err, &terminalErr) {
 		return false
 	}
-	switch awsErr.Code() {
+	switch terminalErr.ErrorCode() {
 	case "InvalidInput",
 		"MalformedPolicyDocument":
 		return true

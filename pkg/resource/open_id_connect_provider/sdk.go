@@ -28,8 +28,10 @@ import (
 	ackerr "github.com/aws-controllers-k8s/runtime/pkg/errors"
 	ackrequeue "github.com/aws-controllers-k8s/runtime/pkg/requeue"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
-	"github.com/aws/aws-sdk-go/aws"
-	svcsdk "github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
+	svcsdktypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
+	smithy "github.com/aws/smithy-go"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -40,8 +42,7 @@ import (
 var (
 	_ = &metav1.Time{}
 	_ = strings.ToLower("")
-	_ = &aws.JSONValue{}
-	_ = &svcsdk.IAM{}
+	_ = &svcsdk.Client{}
 	_ = &svcapitypes.OpenIDConnectProvider{}
 	_ = ackv1alpha1.AWSAccountID("")
 	_ = &ackerr.NotFound
@@ -49,6 +50,7 @@ var (
 	_ = &reflect.Value{}
 	_ = fmt.Sprintf("")
 	_ = &ackrequeue.NoRequeue{}
+	_ = &aws.Config{}
 )
 
 // sdkFind returns SDK-specific information about a supplied resource
@@ -74,13 +76,11 @@ func (rm *resourceManager) sdkFind(
 	}
 
 	var resp *svcsdk.GetOpenIDConnectProviderOutput
-	resp, err = rm.sdkapi.GetOpenIDConnectProviderWithContext(ctx, input)
+	resp, err = rm.sdkapi.GetOpenIDConnectProvider(ctx, input)
 	rm.metrics.RecordAPICall("READ_ONE", "GetOpenIDConnectProvider", err)
 	if err != nil {
-		if reqErr, ok := ackerr.AWSRequestFailure(err); ok && reqErr.StatusCode() == 404 {
-			return nil, ackerr.NotFound
-		}
-		if awsErr, ok := ackerr.AWSError(err); ok && awsErr.Code() == "NoSuchEntity" {
+		var awsErr smithy.APIError
+		if errors.As(err, &awsErr) && awsErr.ErrorCode() == "NoSuchEntity" {
 			return nil, ackerr.NotFound
 		}
 		return nil, err
@@ -91,13 +91,7 @@ func (rm *resourceManager) sdkFind(
 	ko := r.ko.DeepCopy()
 
 	if resp.ClientIDList != nil {
-		f0 := []*string{}
-		for _, f0iter := range resp.ClientIDList {
-			var f0elem string
-			f0elem = *f0iter
-			f0 = append(f0, &f0elem)
-		}
-		ko.Spec.ClientIDs = f0
+		ko.Spec.ClientIDs = aws.StringSlice(resp.ClientIDList)
 	} else {
 		ko.Spec.ClientIDs = nil
 	}
@@ -118,13 +112,7 @@ func (rm *resourceManager) sdkFind(
 		ko.Spec.Tags = nil
 	}
 	if resp.ThumbprintList != nil {
-		f3 := []*string{}
-		for _, f3iter := range resp.ThumbprintList {
-			var f3elem string
-			f3elem = *f3iter
-			f3 = append(f3, &f3elem)
-		}
-		ko.Spec.Thumbprints = f3
+		ko.Spec.Thumbprints = aws.StringSlice(resp.ThumbprintList)
 	} else {
 		ko.Spec.Thumbprints = nil
 	}
@@ -161,7 +149,7 @@ func (rm *resourceManager) newDescribeRequestPayload(
 	res := &svcsdk.GetOpenIDConnectProviderInput{}
 
 	if r.ko.Status.ACKResourceMetadata != nil && r.ko.Status.ACKResourceMetadata.ARN != nil {
-		res.SetOpenIDConnectProviderArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
+		res.OpenIDConnectProviderArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
 	}
 
 	return res, nil
@@ -186,7 +174,7 @@ func (rm *resourceManager) sdkCreate(
 
 	var resp *svcsdk.CreateOpenIDConnectProviderOutput
 	_ = resp
-	resp, err = rm.sdkapi.CreateOpenIDConnectProviderWithContext(ctx, input)
+	resp, err = rm.sdkapi.CreateOpenIDConnectProvider(ctx, input)
 	rm.metrics.RecordAPICall("CREATE", "CreateOpenIDConnectProvider", err)
 	if err != nil {
 		return nil, err
@@ -232,39 +220,27 @@ func (rm *resourceManager) newCreateRequestPayload(
 	res := &svcsdk.CreateOpenIDConnectProviderInput{}
 
 	if r.ko.Spec.ClientIDs != nil {
-		f0 := []*string{}
-		for _, f0iter := range r.ko.Spec.ClientIDs {
-			var f0elem string
-			f0elem = *f0iter
-			f0 = append(f0, &f0elem)
-		}
-		res.SetClientIDList(f0)
+		res.ClientIDList = aws.ToStringSlice(r.ko.Spec.ClientIDs)
 	}
 	if r.ko.Spec.Tags != nil {
-		f1 := []*svcsdk.Tag{}
+		f1 := []svcsdktypes.Tag{}
 		for _, f1iter := range r.ko.Spec.Tags {
-			f1elem := &svcsdk.Tag{}
+			f1elem := &svcsdktypes.Tag{}
 			if f1iter.Key != nil {
-				f1elem.SetKey(*f1iter.Key)
+				f1elem.Key = f1iter.Key
 			}
 			if f1iter.Value != nil {
-				f1elem.SetValue(*f1iter.Value)
+				f1elem.Value = f1iter.Value
 			}
-			f1 = append(f1, f1elem)
+			f1 = append(f1, *f1elem)
 		}
-		res.SetTags(f1)
+		res.Tags = f1
 	}
 	if r.ko.Spec.Thumbprints != nil {
-		f2 := []*string{}
-		for _, f2iter := range r.ko.Spec.Thumbprints {
-			var f2elem string
-			f2elem = *f2iter
-			f2 = append(f2, &f2elem)
-		}
-		res.SetThumbprintList(f2)
+		res.ThumbprintList = aws.ToStringSlice(r.ko.Spec.Thumbprints)
 	}
 	if r.ko.Spec.URL != nil {
-		res.SetUrl(*r.ko.Spec.URL)
+		res.Url = r.ko.Spec.URL
 	}
 
 	return res, nil
@@ -297,7 +273,7 @@ func (rm *resourceManager) sdkDelete(
 	}
 	var resp *svcsdk.DeleteOpenIDConnectProviderOutput
 	_ = resp
-	resp, err = rm.sdkapi.DeleteOpenIDConnectProviderWithContext(ctx, input)
+	resp, err = rm.sdkapi.DeleteOpenIDConnectProvider(ctx, input)
 	rm.metrics.RecordAPICall("DELETE", "DeleteOpenIDConnectProvider", err)
 	return nil, err
 }
@@ -310,7 +286,7 @@ func (rm *resourceManager) newDeleteRequestPayload(
 	res := &svcsdk.DeleteOpenIDConnectProviderInput{}
 
 	if r.ko.Status.ACKResourceMetadata != nil && r.ko.Status.ACKResourceMetadata.ARN != nil {
-		res.SetOpenIDConnectProviderArn(string(*r.ko.Status.ACKResourceMetadata.ARN))
+		res.OpenIDConnectProviderArn = (*string)(r.ko.Status.ACKResourceMetadata.ARN)
 	}
 
 	return res, nil
@@ -418,11 +394,12 @@ func (rm *resourceManager) terminalAWSError(err error) bool {
 	if err == nil {
 		return false
 	}
-	awsErr, ok := ackerr.AWSError(err)
-	if !ok {
+
+	var terminalErr smithy.APIError
+	if !errors.As(err, &terminalErr) {
 		return false
 	}
-	switch awsErr.Code() {
+	switch terminalErr.ErrorCode() {
 	case "InvalidInput",
 		"EntityAlreadyExists":
 		return true
