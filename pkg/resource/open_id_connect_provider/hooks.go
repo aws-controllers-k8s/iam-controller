@@ -15,12 +15,10 @@ package open_id_connect_provider
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	ackcondition "github.com/aws-controllers-k8s/runtime/pkg/condition"
-	ackerr "github.com/aws-controllers-k8s/runtime/pkg/errors"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
 	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
 	svcsdktypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
@@ -39,11 +37,6 @@ func (rm *resourceManager) customUpdateOpenIDConnectProvider(
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.customUpdateOpenIDConnectProvider")
 	defer func() { exit(err) }()
-
-	if immutableFieldChanges := rm.getImmutableFieldChanges(delta); len(immutableFieldChanges) > 0 {
-		msg := fmt.Sprintf("Immutable Spec fields have been modified: %s", strings.Join(immutableFieldChanges, ","))
-		return nil, ackerr.NewTerminalError(fmt.Errorf(msg))
-	}
 
 	if delta.DifferentAt("Spec.Thumbprints") {
 		// Update the thumbprint list
