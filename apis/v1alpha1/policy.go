@@ -39,13 +39,16 @@ type PolicySpec struct {
 	//
 	// The policy description is immutable. After a value is assigned, it cannot
 	// be changed.
+
 	Description *string `json:"description,omitempty"`
 	// The friendly name of the policy.
 	//
 	// IAM user, group, role, and policy names must be unique within the account.
 	// Names are not distinguished by case. For example, you cannot create resources
 	// named both "MyResource" and "myresource".
+
 	// +kubebuilder:validation:Required
+
 	Name *string `json:"name"`
 	// The path for the policy.
 	//
@@ -63,6 +66,7 @@ type PolicySpec struct {
 	// letters.
 	//
 	// You cannot use an asterisk (*) in the path name.
+
 	Path *string `json:"path,omitempty"`
 	// The JSON policy document that you want to use as the content for the new
 	// policy.
@@ -84,16 +88,17 @@ type PolicySpec struct {
 	// The regex pattern (http://wikipedia.org/wiki/regex) used to validate this
 	// parameter is a string of characters consisting of the following:
 	//
-	//   - Any printable ASCII character ranging from the space character (\u0020)
-	//     through the end of the ASCII character range
+	//    * Any printable ASCII character ranging from the space character (\u0020)
+	//    through the end of the ASCII character range
 	//
-	//   - The printable characters in the Basic Latin and Latin-1 Supplement character
-	//     set (through \u00FF)
+	//    * The printable characters in the Basic Latin and Latin-1 Supplement character
+	//    set (through \u00FF)
 	//
-	//   - The special characters tab (\u0009), line feed (\u000A), and carriage
-	//     return (\u000D)
-	//
+	//    * The special characters tab (\u0009), line feed (\u000A), and carriage
+	//    return (\u000D)
+
 	// +kubebuilder:validation:Required
+
 	PolicyDocument *string `json:"policyDocument"`
 	// A list of tags that you want to attach to the new IAM customer managed policy.
 	// Each tag consists of a key name and an associated value. For more information
@@ -102,6 +107,7 @@ type PolicySpec struct {
 	//
 	// If any one of the tags is invalid or if you exceed the allowed maximum number
 	// of tags, then the entire request fails and the resource is not created.
+
 	Tags []*Tag `json:"tags,omitempty"`
 }
 
@@ -112,7 +118,7 @@ type PolicyStatus struct {
 	// constructed ARN for the resource
 	// +kubebuilder:validation:Optional
 	ACKResourceMetadata *ackv1alpha1.ResourceMetadata `json:"ackResourceMetadata"`
-	// All CRS managed by ACK have a common `Status.Conditions` member that
+	// All CRs managed by ACK have a common `Status.Conditions` member that
 	// contains a collection of `ackv1alpha1.Condition` objects that describe
 	// the various terminal states of the CR and its backend AWS service API
 	// resource

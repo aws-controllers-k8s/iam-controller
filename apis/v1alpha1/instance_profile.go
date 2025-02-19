@@ -40,7 +40,9 @@ type InstanceProfileSpec struct {
 	// This parameter allows (through its regex pattern (http://wikipedia.org/wiki/regex))
 	// a string of characters consisting of upper and lowercase alphanumeric characters
 	// with no spaces. You can also include any of the following characters: _+=,.@-
+
 	// +kubebuilder:validation:Required
+
 	Name *string `json:"name"`
 	// The path to the instance profile. For more information about paths, see IAM
 	// Identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
@@ -55,8 +57,13 @@ type InstanceProfileSpec struct {
 	// can contain any ASCII character from the ! (\u0021) through the DEL character
 	// (\u007F), including most punctuation characters, digits, and upper and lowercased
 	// letters.
-	Path    *string                                  `json:"path,omitempty"`
-	Role    *string                                  `json:"role,omitempty"`
+
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
+
+	Path *string `json:"path,omitempty"`
+
+	Role *string `json:"role,omitempty"`
+
 	RoleRef *ackv1alpha1.AWSResourceReferenceWrapper `json:"roleRef,omitempty"`
 	// A list of tags that you want to attach to the newly created IAM instance
 	// profile. Each tag consists of a key name and an associated value. For more
@@ -65,6 +72,7 @@ type InstanceProfileSpec struct {
 	//
 	// If any one of the tags is invalid or if you exceed the allowed maximum number
 	// of tags, then the entire request fails and the resource is not created.
+
 	Tags []*Tag `json:"tags,omitempty"`
 }
 
@@ -75,7 +83,7 @@ type InstanceProfileStatus struct {
 	// constructed ARN for the resource
 	// +kubebuilder:validation:Optional
 	ACKResourceMetadata *ackv1alpha1.ResourceMetadata `json:"ackResourceMetadata"`
-	// All CRS managed by ACK have a common `Status.Conditions` member that
+	// All CRs managed by ACK have a common `Status.Conditions` member that
 	// contains a collection of `ackv1alpha1.Condition` objects that describe
 	// the various terminal states of the CR and its backend AWS service API
 	// resource

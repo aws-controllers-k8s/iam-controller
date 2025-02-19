@@ -37,20 +37,24 @@ type RoleSpec struct {
 	// The regex pattern (http://wikipedia.org/wiki/regex) used to validate this
 	// parameter is a string of characters consisting of the following:
 	//
-	//   - Any printable ASCII character ranging from the space character (\u0020)
-	//     through the end of the ASCII character range
+	//    * Any printable ASCII character ranging from the space character (\u0020)
+	//    through the end of the ASCII character range
 	//
-	//   - The printable characters in the Basic Latin and Latin-1 Supplement character
-	//     set (through \u00FF)
+	//    * The printable characters in the Basic Latin and Latin-1 Supplement character
+	//    set (through \u00FF)
 	//
-	//   - The special characters tab (\u0009), line feed (\u000A), and carriage
-	//     return (\u000D)
+	//    * The special characters tab (\u0009), line feed (\u000A), and carriage
+	//    return (\u000D)
 	//
 	// Upon success, the response includes the same trust policy in JSON format.
+
 	// +kubebuilder:validation:Required
+
 	AssumeRolePolicyDocument *string `json:"assumeRolePolicyDocument"`
 	// A description of the role.
-	Description    *string            `json:"description,omitempty"`
+
+	Description *string `json:"description,omitempty"`
+
 	InlinePolicies map[string]*string `json:"inlinePolicies,omitempty"`
 	// The maximum session duration (in seconds) that you want to set for the specified
 	// role. If you do not specify a value for this setting, the default value of
@@ -66,6 +70,7 @@ type RoleSpec struct {
 	// operations to create a console URL. For more information, see Using IAM roles
 	// (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use.html) in the
 	// IAM User Guide.
+
 	MaxSessionDuration *int64 `json:"maxSessionDuration,omitempty"`
 	// The name of the role to create.
 	//
@@ -76,7 +81,9 @@ type RoleSpec struct {
 	// This parameter allows (through its regex pattern (http://wikipedia.org/wiki/regex))
 	// a string of characters consisting of upper and lowercase alphanumeric characters
 	// with no spaces. You can also include any of the following characters: _+=,.@-
+
 	// +kubebuilder:validation:Required
+
 	Name *string `json:"name"`
 	// The path to the role. For more information about paths, see IAM Identifiers
 	// (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
@@ -91,6 +98,7 @@ type RoleSpec struct {
 	// can contain any ASCII character from the ! (\u0021) through the DEL character
 	// (\u007F), including most punctuation characters, digits, and upper and lowercased
 	// letters.
+
 	Path *string `json:"path,omitempty"`
 	// The ARN of the managed policy that is used to set the permissions boundary
 	// for the role.
@@ -104,10 +112,14 @@ type RoleSpec struct {
 	//
 	// For more information about policy types, see Policy types (https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies.html#access_policy-types)
 	// in the IAM User Guide.
-	PermissionsBoundary    *string                                    `json:"permissionsBoundary,omitempty"`
-	PermissionsBoundaryRef *ackv1alpha1.AWSResourceReferenceWrapper   `json:"permissionsBoundaryRef,omitempty"`
-	Policies               []*string                                  `json:"policies,omitempty"`
-	PolicyRefs             []*ackv1alpha1.AWSResourceReferenceWrapper `json:"policyRefs,omitempty"`
+
+	PermissionsBoundary *string `json:"permissionsBoundary,omitempty"`
+
+	PermissionsBoundaryRef *ackv1alpha1.AWSResourceReferenceWrapper `json:"permissionsBoundaryRef,omitempty"`
+
+	Policies []*string `json:"policies,omitempty"`
+
+	PolicyRefs []*ackv1alpha1.AWSResourceReferenceWrapper `json:"policyRefs,omitempty"`
 	// A list of tags that you want to attach to the new role. Each tag consists
 	// of a key name and an associated value. For more information about tagging,
 	// see Tagging IAM resources (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_tags.html)
@@ -115,6 +127,7 @@ type RoleSpec struct {
 	//
 	// If any one of the tags is invalid or if you exceed the allowed maximum number
 	// of tags, then the entire request fails and the resource is not created.
+
 	Tags []*Tag `json:"tags,omitempty"`
 }
 
@@ -125,7 +138,7 @@ type RoleStatus struct {
 	// constructed ARN for the resource
 	// +kubebuilder:validation:Optional
 	ACKResourceMetadata *ackv1alpha1.ResourceMetadata `json:"ackResourceMetadata"`
-	// All CRS managed by ACK have a common `Status.Conditions` member that
+	// All CRs managed by ACK have a common `Status.Conditions` member that
 	// contains a collection of `ackv1alpha1.Condition` objects that describe
 	// the various terminal states of the CR and its backend AWS service API
 	// resource

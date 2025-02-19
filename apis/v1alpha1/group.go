@@ -38,7 +38,9 @@ type GroupSpec struct {
 	// IAM user, group, role, and policy names must be unique within the account.
 	// Names are not distinguished by case. For example, you cannot create resources
 	// named both "MyResource" and "myresource".
+
 	// +kubebuilder:validation:Required
+
 	Name *string `json:"name"`
 	// The path to the group. For more information about paths, see IAM identifiers
 	// (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
@@ -53,8 +55,11 @@ type GroupSpec struct {
 	// can contain any ASCII character from the ! (\u0021) through the DEL character
 	// (\u007F), including most punctuation characters, digits, and upper and lowercased
 	// letters.
-	Path       *string                                    `json:"path,omitempty"`
-	Policies   []*string                                  `json:"policies,omitempty"`
+
+	Path *string `json:"path,omitempty"`
+
+	Policies []*string `json:"policies,omitempty"`
+
 	PolicyRefs []*ackv1alpha1.AWSResourceReferenceWrapper `json:"policyRefs,omitempty"`
 }
 
@@ -65,7 +70,7 @@ type GroupStatus struct {
 	// constructed ARN for the resource
 	// +kubebuilder:validation:Optional
 	ACKResourceMetadata *ackv1alpha1.ResourceMetadata `json:"ackResourceMetadata"`
-	// All CRS managed by ACK have a common `Status.Conditions` member that
+	// All CRs managed by ACK have a common `Status.Conditions` member that
 	// contains a collection of `ackv1alpha1.Condition` objects that describe
 	// the various terminal states of the CR and its backend AWS service API
 	// resource
