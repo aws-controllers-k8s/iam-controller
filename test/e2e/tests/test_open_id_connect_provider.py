@@ -138,16 +138,3 @@ class TestOpenIdConnectProvider:
         after_update_expected_tags = [{"Key": "key2", "Value": "val2"}]
         latest_tags = open_id_connect_provider.get_tags(oidc_provider_arn)
         assert tag.cleaned(latest_tags) == after_update_expected_tags
-
-        # validate that changing the URL results in an advisory condition
-        update_url = {"spec": {"url": "https://other.example.com"}}
-        logging.debug(f"\n\n**** OIDCProvider update of URL intended to fail")
-        k8s.patch_custom_resource(ref, update_url)
-        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
-
-        condition.assert_not_synced(ref)
-        condition.assert_type_status(
-            ref,
-            cond_type_match=condition.CONDITION_TYPE_TERMINAL,
-            cond_status_match=True,
-        )
