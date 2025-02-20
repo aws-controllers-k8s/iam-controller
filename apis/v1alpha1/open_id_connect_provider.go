@@ -76,6 +76,7 @@ type OpenIDConnectProviderSpec struct {
 	// Services account. If you try to submit a URL that has already been used for
 	// an OpenID Connect provider in the Amazon Web Services account, you will get
 	// an error.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	// +kubebuilder:validation:Required
 	URL *string `json:"url"`
 }
@@ -87,7 +88,7 @@ type OpenIDConnectProviderStatus struct {
 	// constructed ARN for the resource
 	// +kubebuilder:validation:Optional
 	ACKResourceMetadata *ackv1alpha1.ResourceMetadata `json:"ackResourceMetadata"`
-	// All CRS managed by ACK have a common `Status.Conditions` member that
+	// All CRs managed by ACK have a common `Status.Conditions` member that
 	// contains a collection of `ackv1alpha1.Condition` objects that describe
 	// the various terminal states of the CR and its backend AWS service API
 	// resource
