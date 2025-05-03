@@ -1,0 +1,7 @@
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: ServiceLinkedRole
+metadata:
+  name: $ROLE_NAME
+spec:
+  description: $ROLE_DESCRIPTION
+  awsServiceName: $AWS_SERVICE_NAME

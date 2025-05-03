@@ -10,7 +10,7 @@ ignore:
    - PolicyVersion
    #- Role
    - SAMLProvider
-   - ServiceLinkedRole
+   #- ServiceLinkedRole
    - ServiceSpecificCredential
    #- User
    - VirtualMFADevice
@@ -342,3 +342,16 @@ resources:
       Tags:
         compare:
           is_ignored: true
+  ServiceLinkedRole:
+    tags:
+      ignore: true
+    find_operation:
+      custom_method_name: customGetServiceLinkedRole
+    update_operation:
+      custom_method_name: customUpdateServiceLinkedRole
+    hooks:
+      sdk_create_post_set_output:
+        template_path: hooks/service_linked_role/sdk_create_post_set_output.go.tpl
+    exceptions:
+      terminal_codes:
+        - InvalidInput
