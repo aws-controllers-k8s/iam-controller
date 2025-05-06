@@ -18,6 +18,7 @@ import time
 
 import pytest
 
+from enum import Enum
 from acktest.k8s import condition
 from acktest.k8s import resource as k8s
 from acktest.resources import random_suffix_name
@@ -35,6 +36,10 @@ CHECK_WAIT_AFTER_SECONDS = 10
 MODIFY_WAIT_AFTER_SECONDS = 20
 CREATE_WAIT_AFTER_SECONDS = 10
 
+class AdoptionPolicy(str, Enum):
+    NONE = ""
+    ADOPT = "adopt"
+    ADOPT_OR_CREATE = "adopt-or-create"
 
 @pytest.fixture(scope="module")
 def simple_policy():
@@ -79,17 +84,30 @@ def simple_policy():
 
     policy.wait_until_deleted(policy_arn)
 
-@pytest.fixture(scope="module")
-def adopt_policy():
-    resource_arn = get_bootstrap_resources().AdoptedPolicy.arns[0]
-    resource_name = random_suffix_name("adopted-policy", 24)
+@pytest.fixture
+def adopt_policy(request):
+    filename = ""
+    resource_name = ""
     replacements = REPLACEMENT_VALUES.copy()
+
+    marker = request.node.get_closest_marker("resource_data")
+    assert marker is not None
+    data = marker.args[0]
+    assert 'adoption-policy' in data
+    replacements["ADOPTION_POLICY"] = data['adoption-policy']
+    assert 'filename' in data
+    filename = data['filename']
+    assert 'resource_name' in data
+    resource_name = data['resource_name']
+
+    resource_name = random_suffix_name(resource_name, 24)
+    resource_arn = get_bootstrap_resources().AdoptedPolicy.arns[0]
     replacements["POLICY_ADOPTION_NAME"] = resource_name
-    replacements["ADOPTION_POLICY"] = "adopt"
     replacements["ADOPTION_FIELDS"] = f"{{\\\"arn\\\": \\\"{resource_arn}\\\"}}"
+    replacements["POLICY_ADOPTION_NAME"] = resource_name
 
     resource_data = load_resource(
-        "policy_adoption",
+        filename,
         additional_replacements=replacements,
     )    
 
@@ -227,10 +245,11 @@ class TestPolicy:
         after_doc = after_pv["Document"]
         assert after_doc == new_policy_doc
 
+    @pytest.mark.resource_data({'adoption-policy': AdoptionPolicy.ADOPT, 'filename': 'policy_adopt', 'resource_name': 'adopt'})
     def test_policy_adopt_update(self, adopt_policy):
         ref, cr, policy_arn = adopt_policy
 
-        condition.assert_synced(ref)
+        k8s.wait_on_condition(ref, "ACK.ResourceSynced", "True", wait_periods=5)
 
         assert cr is not None
         assert 'status' in cr
@@ -262,3 +281,17 @@ class TestPolicy:
 
         policy_doc = policy.get_version(policy_arn, "v2")["Document"]
         assert policy_doc == new_policy_doc
+
+    @pytest.mark.resource_data({'adoption-policy': AdoptionPolicy.ADOPT_OR_CREATE, 'filename': 'policy_adopt_or_create', 'resource_name': 'adopt-or-create'})
+    def test_policy_adopt_or_create(self, adopt_policy):
+        ref, cr, policy_arn = adopt_policy
+
+        k8s.wait_on_condition(ref, "ACK.ResourceSynced", "True", wait_periods=5)
+
+        assert cr is not None
+        assert 'status' in cr
+        assert 'defaultVersionID' in cr['status']
+        assert cr['status']['defaultVersionID'] == 'v1'
+        assert 'ackResourceMetadata' in cr['status']
+        assert 'arn' in cr['status']['ackResourceMetadata']
+        assert cr['status']['ackResourceMetadata']['arn'] == policy_arn
