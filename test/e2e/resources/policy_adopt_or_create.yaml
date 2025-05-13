@@ -1,0 +1,23 @@
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: Policy
+metadata:
+  name: $POLICY_ADOPTION_NAME
+  annotations:
+    services.k8s.aws/adoption-policy: $ADOPTION_POLICY
+    services.k8s.aws/adoption-fields: "$ADOPTION_FIELDS"
+    services.k8s.aws/deletion-policy: retain
+spec:
+  name: $POLICY_ADOPTION_NAME
+  policyDocument: |
+    {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Action": [
+                    "s3:ListBucket",
+                ],
+                "Resource": "*"
+            }
+        ]
+    }
