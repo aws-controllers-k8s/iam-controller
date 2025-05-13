@@ -22,6 +22,7 @@ from enum import Enum
 from acktest.k8s import condition
 from acktest.k8s import resource as k8s
 from acktest.resources import random_suffix_name
+from acktest.adoption import ADOPT_ADOPTION_POLICY, ADOPT_OR_CREATE_ADOPTION_POLICY
 from e2e import service_marker, CRD_GROUP, CRD_VERSION, load_resource
 from e2e.bootstrap_resources import get_bootstrap_resources
 from e2e.common.types import POLICY_RESOURCE_PLURAL
@@ -35,11 +36,6 @@ CHECK_WAIT_AFTER_SECONDS = 10
 # information on a resource.
 MODIFY_WAIT_AFTER_SECONDS = 20
 CREATE_WAIT_AFTER_SECONDS = 10
-
-class AdoptionPolicy(str, Enum):
-    NONE = ""
-    ADOPT = "adopt"
-    ADOPT_OR_CREATE = "adopt-or-create"
 
 @pytest.fixture(scope="module")
 def simple_policy():
@@ -245,7 +241,7 @@ class TestPolicy:
         after_doc = after_pv["Document"]
         assert after_doc == new_policy_doc
 
-    @pytest.mark.resource_data({'adoption-policy': AdoptionPolicy.ADOPT, 'filename': 'policy_adopt', 'resource_name': 'adopt'})
+    @pytest.mark.resource_data({'adoption-policy': ADOPT_ADOPTION_POLICY, 'filename': 'policy_adopt', 'resource_name': 'adopt'})
     def test_policy_adopt_update(self, adopt_policy):
         ref, cr, policy_arn = adopt_policy
 
@@ -282,7 +278,7 @@ class TestPolicy:
         policy_doc = policy.get_version(policy_arn, "v2")["Document"]
         assert policy_doc == new_policy_doc
 
-    @pytest.mark.resource_data({'adoption-policy': AdoptionPolicy.ADOPT_OR_CREATE, 'filename': 'policy_adopt_or_create', 'resource_name': 'adopt-or-create'})
+    @pytest.mark.resource_data({'adoption-policy': ADOPT_OR_CREATE_ADOPTION_POLICY, 'filename': 'policy_adopt_or_create', 'resource_name': 'adopt-or-create'})
     def test_policy_adopt_or_create(self, adopt_policy):
         ref, cr, policy_arn = adopt_policy
 
