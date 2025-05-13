@@ -4,7 +4,7 @@
 
 image:
   repository: public.ecr.aws/aws-controllers-k8s/iam-controller
-  tag: 1.3.20
+  tag: 1.3.21
   pullPolicy: IfNotPresent
   pullSecrets: []
 
@@ -142,12 +142,12 @@ reconcile:
   # If empty, all resources will be reconciled.
   # If specified, only the listed resource kinds will be reconciled.
   resources:
-    - Groups
-    - Instanceprofiles
-    - Openidconnectproviders
-    - Policies
-    - Roles
-    - Users
+    - Group
+    - InstanceProfile
+    - OpenIDConnectProvider
+    - Policy
+    - Role
+    - User
 
 serviceAccount:
   # Specifies whether a service account should be created
