@@ -288,6 +288,7 @@ class TestPolicy:
 
         k8s.wait_on_condition(ref, "ACK.ResourceSynced", "True", wait_periods=5)
 
+        # Post runtime FIX
         assert cr is not None
         assert 'status' in cr
         assert 'defaultVersionID' in cr['status']
