@@ -31,6 +31,25 @@ import (
 	commonutil "github.com/aws-controllers-k8s/iam-controller/pkg/util"
 )
 
+func (rm *resourceManager) attachPolicies(ctx context.Context, r *resource) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.attachPolicies")
+	defer func() { exit(err) }()
+	for _, p := range r.ko.Spec.Policies {
+		err := rm.addManagedPolicy(ctx, r, p)
+		if err != nil {
+			return err
+		}
+	}
+	for n, p := range r.ko.Spec.InlinePolicies {
+		err := rm.addInlinePolicy(ctx, r, n, p)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // putRolePermissionsBoundary calls the IAM API to set a given role
 // permission boundary.
 func (rm *resourceManager) putRolePermissionsBoundary(
