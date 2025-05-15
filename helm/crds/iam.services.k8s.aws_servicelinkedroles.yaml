@@ -52,6 +52,9 @@ spec:
                   Role column. Choose the Yes link to view the service-linked role documentation
                   for that service.
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable once set
+                  rule: self == oldSelf
               customSuffix:
                 description: |-
                   A string that you provide, which is combined with the service-provided prefix
@@ -64,6 +67,9 @@ spec:
                   optional suffix and the operation fails, try the operation again without
                   the suffix.
                 type: string
+                x-kubernetes-validations:
+                - message: Value is immutable once set
+                  rule: self == oldSelf
               description:
                 description: The description of the role.
                 type: string

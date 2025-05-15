@@ -345,6 +345,11 @@ resources:
   ServiceLinkedRole:
     tags:
       ignore: true
+    fields:
+      AWSServiceName:
+        is_immutable: true
+      CustomSuffix:
+        is_immutable: true
     find_operation:
       custom_method_name: customGetServiceLinkedRole
     update_operation:

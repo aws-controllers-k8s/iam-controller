@@ -33,6 +33,7 @@ type ServiceLinkedRoleSpec struct {
 	// in the IAM User Guide. Look for the services that have Yes in the Service-Linked
 	// Role column. Choose the Yes link to view the service-linked role documentation
 	// for that service.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	// +kubebuilder:validation:Required
 	AWSServiceName *string `json:"awsServiceName"`
 	// A string that you provide, which is combined with the service-provided prefix
@@ -44,6 +45,7 @@ type ServiceLinkedRoleSpec struct {
 	// Some services do not support the CustomSuffix parameter. If you provide an
 	// optional suffix and the operation fails, try the operation again without
 	// the suffix.
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	CustomSuffix *string `json:"customSuffix,omitempty"`
 	// The description of the role.
 	Description *string `json:"description,omitempty"`
