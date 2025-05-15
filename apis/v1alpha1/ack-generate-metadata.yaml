@@ -3,7 +3,7 @@ ack_generate_info:
   build_hash: 0909e7f0adb8ffe4120a8c20d5d58b991f2539e9
   go_version: go1.24.2
   version: v0.46.2
-api_directory_checksum: d7e5854d868fce7b5e9495117543d7d0b1201112
+api_directory_checksum: 7e1c19231d3275a1147157f6943a7391953f7001
 api_version: v1alpha1
 aws_sdk_go_version: v1.32.6
 generator_config_info:
