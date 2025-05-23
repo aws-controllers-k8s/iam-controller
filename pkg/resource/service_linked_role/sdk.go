@@ -173,8 +173,6 @@ func (rm *resourceManager) sdkCreate(
 	}
 
 	rm.setStatusDefaults(ko)
-	ackcondition.SetSynced(&resource{ko}, corev1.ConditionFalse, nil, nil)
-
 	return &resource{ko}, nil
 }
 
