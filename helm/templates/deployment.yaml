@@ -58,6 +58,8 @@ spec:
         - --watch-namespace
         - "$(ACK_WATCH_NAMESPACE)"
         - --watch-selectors
+        - --reconcile-resources
+          - "$(RECONCILE_RESOURCES)"
         - "$(ACK_WATCH_SELECTORS)"
         - --deletion-policy
         - "$(DELETION_POLICY)"
@@ -107,6 +109,8 @@ spec:
           value: {{ include "ack-iam-controller.watch-namespace" . }}
         - name: ACK_WATCH_SELECTORS
           value: {{ .Values.watchSelectors }}
+        - name: RECONCILE_RESOURCES
+          value: {{ join "," .Values.reconcile.resources | quote }}
         - name: DELETION_POLICY
           value: {{ .Values.deletionPolicy }}
         - name: LEADER_ELECTION_NAMESPACE
