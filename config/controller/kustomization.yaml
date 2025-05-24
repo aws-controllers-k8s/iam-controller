@@ -6,4 +6,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: public.ecr.aws/aws-controllers-k8s/iam-controller
-  newTag: 0.0.0-non-release-version
+  newTag: 1.3.21
