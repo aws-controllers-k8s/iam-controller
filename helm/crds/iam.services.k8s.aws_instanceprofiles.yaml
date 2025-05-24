@@ -59,6 +59,8 @@ spec:
                   This parameter allows (through its regex pattern (http://wikipedia.org/wiki/regex))
                   a string of characters consisting of upper and lowercase alphanumeric characters
                   with no spaces. You can also include any of the following characters: _+=,.@-
+
+                  Regex Pattern: `^[\w+=,.@-]+$`
                 type: string
               path:
                 description: |-
@@ -75,6 +77,8 @@ spec:
                   can contain any ASCII character from the ! (\u0021) through the DEL character
                   (\u007F), including most punctuation characters, digits, and upper and lowercased
                   letters.
+
+                  Regex Pattern: `^(\u002F)|(\u002F[\u0021-\u007E]+\u002F)$`
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable once set
@@ -199,6 +203,8 @@ spec:
                   The stable and unique string identifying the instance profile. For more information
                   about IDs, see IAM identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
                   in the IAM User Guide.
+
+                  Regex Pattern: `^[\w]+$`
                 type: string
             type: object
         type: object

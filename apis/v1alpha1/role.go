@@ -47,9 +47,13 @@ type RoleSpec struct {
 	//     return (\u000D)
 	//
 	// Upon success, the response includes the same trust policy in JSON format.
+	//
+	// Regex Pattern: `^[\u0009\u000A\u000D\u0020-\u00FF]+$`
 	// +kubebuilder:validation:Required
 	AssumeRolePolicyDocument *string `json:"assumeRolePolicyDocument"`
 	// A description of the role.
+	//
+	// Regex Pattern: `^[\u0009\u000A\u000D\u0020-\u007E\u00A1-\u00FF]*$`
 	Description    *string            `json:"description,omitempty"`
 	InlinePolicies map[string]*string `json:"inlinePolicies,omitempty"`
 	// The maximum session duration (in seconds) that you want to set for the specified
@@ -76,6 +80,8 @@ type RoleSpec struct {
 	// This parameter allows (through its regex pattern (http://wikipedia.org/wiki/regex))
 	// a string of characters consisting of upper and lowercase alphanumeric characters
 	// with no spaces. You can also include any of the following characters: _+=,.@-
+	//
+	// Regex Pattern: `^[\w+=,.@-]+$`
 	// +kubebuilder:validation:Required
 	Name *string `json:"name"`
 	// The path to the role. For more information about paths, see IAM Identifiers
@@ -91,6 +97,8 @@ type RoleSpec struct {
 	// can contain any ASCII character from the ! (\u0021) through the DEL character
 	// (\u007F), including most punctuation characters, digits, and upper and lowercased
 	// letters.
+	//
+	// Regex Pattern: `^(\u002F)|(\u002F[\u0021-\u007E]+\u002F)$`
 	Path *string `json:"path,omitempty"`
 	// The ARN of the managed policy that is used to set the permissions boundary
 	// for the role.
@@ -138,6 +146,8 @@ type RoleStatus struct {
 	// The stable and unique string identifying the role. For more information about
 	// IDs, see IAM identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the IAM User Guide.
+	//
+	// Regex Pattern: `^[\w]+$`
 	// +kubebuilder:validation:Optional
 	RoleID *string `json:"roleID,omitempty"`
 	// Contains information about the last time that an IAM role was used. This

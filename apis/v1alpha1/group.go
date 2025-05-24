@@ -38,6 +38,8 @@ type GroupSpec struct {
 	// IAM user, group, role, and policy names must be unique within the account.
 	// Names are not distinguished by case. For example, you cannot create resources
 	// named both "MyResource" and "myresource".
+	//
+	// Regex Pattern: `^[\w+=,.@-]+$`
 	// +kubebuilder:validation:Required
 	Name *string `json:"name"`
 	// The path to the group. For more information about paths, see IAM identifiers
@@ -53,6 +55,8 @@ type GroupSpec struct {
 	// can contain any ASCII character from the ! (\u0021) through the DEL character
 	// (\u007F), including most punctuation characters, digits, and upper and lowercased
 	// letters.
+	//
+	// Regex Pattern: `^(\u002F)|(\u002F[\u0021-\u007E]+\u002F)$`
 	Path       *string                                    `json:"path,omitempty"`
 	Policies   []*string                                  `json:"policies,omitempty"`
 	PolicyRefs []*ackv1alpha1.AWSResourceReferenceWrapper `json:"policyRefs,omitempty"`
@@ -78,6 +82,8 @@ type GroupStatus struct {
 	// The stable and unique string identifying the group. For more information
 	// about IDs, see IAM identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the IAM User Guide.
+	//
+	// Regex Pattern: `^[\w]+$`
 	// +kubebuilder:validation:Optional
 	GroupID *string `json:"groupID,omitempty"`
 }

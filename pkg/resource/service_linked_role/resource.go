@@ -16,6 +16,8 @@
 package service_linked_role
 
 import (
+	"fmt"
+
 	ackv1alpha1 "github.com/aws-controllers-k8s/runtime/apis/core/v1alpha1"
 	ackerrors "github.com/aws-controllers-k8s/runtime/pkg/errors"
 	acktypes "github.com/aws-controllers-k8s/runtime/pkg/types"
@@ -85,11 +87,23 @@ func (r *resource) SetStatus(desired acktypes.AWSResource) {
 // SetIdentifiers sets the Spec or Status field that is referenced as the unique
 // resource identifier
 func (r *resource) SetIdentifiers(identifier *ackv1alpha1.AWSIdentifiers) error {
+	tmp, ok := identifier.AdditionalKeys["roleName"]
+	if !ok {
+		return ackerrors.NewTerminalError(fmt.Errorf("required field missing: roleName"))
+	}
+	r.ko.Spec.AWSServiceName = &tmp
+
 	return nil
 }
 
 // PopulateResourceFromAnnotation populates the fields passed from adoption annotation
 func (r *resource) PopulateResourceFromAnnotation(fields map[string]string) error {
+	tmp, ok := fields["roleName"]
+	if !ok {
+		return ackerrors.NewTerminalError(fmt.Errorf("required field missing: roleName"))
+	}
+	r.ko.Spec.AWSServiceName = &tmp
+
 	return nil
 }
 

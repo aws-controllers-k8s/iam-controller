@@ -239,16 +239,16 @@
         },
         "resourceMaxConcurrentSyncs": {
           "type": "object"
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of resource kinds to reconcile. If empty, all resources will be reconciled.",
+          "default": []
         }
       },
-    "resources": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "List of resource kinds to reconcile. If empty, all resources will be reconciled.",
-      "default": []
-    },
       "type": "object"
     },
     "leaderElection": {

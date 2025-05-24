@@ -345,6 +345,11 @@ resources:
   ServiceLinkedRole:
     tags:
       ignore: true
+    hooks:
+      post_set_resource_identifiers:
+        template_path: hooks/service_linked_role/post_set_resource_identifiers.go.tpl
+      post_populate_resource_from_annotation:
+        template_path: hooks/service_linked_role/post_populate_resource_from_annotation.go.tpl
     fields:
       AWSServiceName:
         is_immutable: true

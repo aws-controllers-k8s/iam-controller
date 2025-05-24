@@ -58,9 +58,9 @@ spec:
         - --watch-namespace
         - "$(ACK_WATCH_NAMESPACE)"
         - --watch-selectors
-        - --reconcile-resources
-          - "$(RECONCILE_RESOURCES)"
         - "$(ACK_WATCH_SELECTORS)"
+        - --reconcile-resources
+        - "$(RECONCILE_RESOURCES)"
         - --deletion-policy
         - "$(DELETION_POLICY)"
 {{- if .Values.leaderElection.enabled }}

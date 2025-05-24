@@ -33,6 +33,8 @@ type ServiceLinkedRoleSpec struct {
 	// in the IAM User Guide. Look for the services that have Yes in the Service-Linked
 	// Role column. Choose the Yes link to view the service-linked role documentation
 	// for that service.
+	//
+	// Regex Pattern: `^[\w+=,.@-]+$`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	// +kubebuilder:validation:Required
 	AWSServiceName *string `json:"awsServiceName"`
@@ -45,9 +47,13 @@ type ServiceLinkedRoleSpec struct {
 	// Some services do not support the CustomSuffix parameter. If you provide an
 	// optional suffix and the operation fails, try the operation again without
 	// the suffix.
+	//
+	// Regex Pattern: `^[\w+=,.@-]+$`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	CustomSuffix *string `json:"customSuffix,omitempty"`
 	// The description of the role.
+	//
+	// Regex Pattern: `^[\u0009\u000A\u000D\u0020-\u007E\u00A1-\u00FF]*$`
 	Description *string `json:"description,omitempty"`
 }
 
@@ -65,6 +71,8 @@ type ServiceLinkedRoleStatus struct {
 	// +kubebuilder:validation:Optional
 	Conditions []*ackv1alpha1.Condition `json:"conditions"`
 	// The policy that grants an entity permission to assume the role.
+	//
+	// Regex Pattern: `^[\u0009\u000A\u000D\u0020-\u00FF]+$`
 	// +kubebuilder:validation:Optional
 	AssumeRolePolicyDocument *string `json:"assumeRolePolicyDocument,omitempty"`
 	// The date and time, in ISO 8601 date-time format (http://www.iso.org/iso/iso8601),
@@ -79,6 +87,8 @@ type ServiceLinkedRoleStatus struct {
 	// The path to the role. For more information about paths, see IAM identifiers
 	// (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the IAM User Guide.
+	//
+	// Regex Pattern: `^(\u002F)|(\u002F[\u0021-\u007E]+\u002F)$`
 	// +kubebuilder:validation:Optional
 	Path *string `json:"path,omitempty"`
 	// The ARN of the policy used to set the permissions boundary for the role.
@@ -91,6 +101,8 @@ type ServiceLinkedRoleStatus struct {
 	// The stable and unique string identifying the role. For more information about
 	// IDs, see IAM identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the IAM User Guide.
+	//
+	// Regex Pattern: `^[\w]+$`
 	// +kubebuilder:validation:Optional
 	RoleID *string `json:"roleID,omitempty"`
 	// Contains information about the last time that an IAM role was used. This
@@ -103,6 +115,8 @@ type ServiceLinkedRoleStatus struct {
 	// +kubebuilder:validation:Optional
 	RoleLastUsed *RoleLastUsed `json:"roleLastUsed,omitempty"`
 	// The friendly name that identifies the role.
+	//
+	// Regex Pattern: `^[\w+=,.@-]+$`
 	// +kubebuilder:validation:Optional
 	RoleName *string `json:"roleName,omitempty"`
 	// A list of tags that are attached to the role. For more information about

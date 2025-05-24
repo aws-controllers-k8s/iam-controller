@@ -51,6 +51,8 @@ spec:
                   in the IAM User Guide. Look for the services that have Yes in the Service-Linked
                   Role column. Choose the Yes link to view the service-linked role documentation
                   for that service.
+
+                  Regex Pattern: `^[\w+=,.@-]+$`
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable once set
@@ -66,12 +68,17 @@ spec:
                   Some services do not support the CustomSuffix parameter. If you provide an
                   optional suffix and the operation fails, try the operation again without
                   the suffix.
+
+                  Regex Pattern: `^[\w+=,.@-]+$`
                 type: string
                 x-kubernetes-validations:
                 - message: Value is immutable once set
                   rule: self == oldSelf
               description:
-                description: The description of the role.
+                description: |-
+                  The description of the role.
+
+                  Regex Pattern: `^[\u0009\u000A\u000D\u0020-\u007E\u00A1-\u00FF]*$`
                 type: string
             required:
             - awsServiceName
@@ -109,8 +116,10 @@ spec:
                 - region
                 type: object
               assumeRolePolicyDocument:
-                description: The policy that grants an entity permission to assume
-                  the role.
+                description: |-
+                  The policy that grants an entity permission to assume the role.
+
+                  Regex Pattern: `^[\u0009\u000A\u000D\u0020-\u00FF]+$`
                 type: string
               conditions:
                 description: |-
@@ -165,6 +174,8 @@ spec:
                   The path to the role. For more information about paths, see IAM identifiers
                   (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
                   in the IAM User Guide.
+
+                  Regex Pattern: `^(\u002F)|(\u002F[\u0021-\u007E]+\u002F)$`
                 type: string
               permissionsBoundary:
                 description: |-
@@ -190,6 +201,8 @@ spec:
                   The stable and unique string identifying the role. For more information about
                   IDs, see IAM identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
                   in the IAM User Guide.
+
+                  Regex Pattern: `^[\w]+$`
                 type: string
               roleLastUsed:
                 description: |-
@@ -208,7 +221,10 @@ spec:
                     type: string
                 type: object
               roleName:
-                description: The friendly name that identifies the role.
+                description: |-
+                  The friendly name that identifies the role.
+
+                  Regex Pattern: `^[\w+=,.@-]+$`
                 type: string
               tags:
                 description: |-
