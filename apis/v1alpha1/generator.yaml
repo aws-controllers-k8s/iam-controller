@@ -10,7 +10,7 @@ ignore:
    - PolicyVersion
    #- Role
    - SAMLProvider
-   - ServiceLinkedRole
+   #- ServiceLinkedRole
    - ServiceSpecificCredential
    #- User
    - VirtualMFADevice
@@ -342,3 +342,23 @@ resources:
       Tags:
         compare:
           is_ignored: true
+  ServiceLinkedRole:
+    tags:
+      ignore: true
+    hooks:
+      post_set_resource_identifiers:
+        template_path: hooks/service_linked_role/post_set_resource_identifiers.go.tpl
+      post_populate_resource_from_annotation:
+        template_path: hooks/service_linked_role/post_populate_resource_from_annotation.go.tpl
+    fields:
+      AWSServiceName:
+        is_immutable: true
+      CustomSuffix:
+        is_immutable: true
+    find_operation:
+      custom_method_name: customGetServiceLinkedRole
+    update_operation:
+      custom_method_name: customUpdateServiceLinkedRole
+    exceptions:
+      terminal_codes:
+        - InvalidInput
