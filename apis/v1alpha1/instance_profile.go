@@ -40,6 +40,8 @@ type InstanceProfileSpec struct {
 	// This parameter allows (through its regex pattern (http://wikipedia.org/wiki/regex))
 	// a string of characters consisting of upper and lowercase alphanumeric characters
 	// with no spaces. You can also include any of the following characters: _+=,.@-
+	//
+	// Regex Pattern: `^[\w+=,.@-]+$`
 	// +kubebuilder:validation:Required
 	Name *string `json:"name"`
 	// The path to the instance profile. For more information about paths, see IAM
@@ -55,6 +57,8 @@ type InstanceProfileSpec struct {
 	// can contain any ASCII character from the ! (\u0021) through the DEL character
 	// (\u007F), including most punctuation characters, digits, and upper and lowercased
 	// letters.
+	//
+	// Regex Pattern: `^(\u002F)|(\u002F[\u0021-\u007E]+\u002F)$`
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	Path    *string                                  `json:"path,omitempty"`
 	Role    *string                                  `json:"role,omitempty"`
@@ -88,6 +92,8 @@ type InstanceProfileStatus struct {
 	// The stable and unique string identifying the instance profile. For more information
 	// about IDs, see IAM identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the IAM User Guide.
+	//
+	// Regex Pattern: `^[\w]+$`
 	// +kubebuilder:validation:Optional
 	InstanceProfileID *string `json:"instanceProfileID,omitempty"`
 }

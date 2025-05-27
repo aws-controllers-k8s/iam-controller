@@ -45,6 +45,8 @@ type PolicySpec struct {
 	// IAM user, group, role, and policy names must be unique within the account.
 	// Names are not distinguished by case. For example, you cannot create resources
 	// named both "MyResource" and "myresource".
+	//
+	// Regex Pattern: `^[\w+=,.@-]+$`
 	// +kubebuilder:validation:Required
 	Name *string `json:"name"`
 	// The path for the policy.
@@ -63,6 +65,8 @@ type PolicySpec struct {
 	// letters.
 	//
 	// You cannot use an asterisk (*) in the path name.
+	//
+	// Regex Pattern: `^((/[A-Za-z0-9\.,\+@=_-]+)*)/$`
 	Path *string `json:"path,omitempty"`
 	// The JSON policy document that you want to use as the content for the new
 	// policy.
@@ -93,6 +97,7 @@ type PolicySpec struct {
 	//   - The special characters tab (\u0009), line feed (\u000A), and carriage
 	//     return (\u000D)
 	//
+	// Regex Pattern: `^[\u0009\u000A\u000D\u0020-\u00FF]+$`
 	// +kubebuilder:validation:Required
 	PolicyDocument *string `json:"policyDocument"`
 	// A list of tags that you want to attach to the new IAM customer managed policy.
@@ -127,6 +132,8 @@ type PolicyStatus struct {
 	// +kubebuilder:validation:Optional
 	CreateDate *metav1.Time `json:"createDate,omitempty"`
 	// The identifier for the version of the policy that is set as the default version.
+	//
+	// Regex Pattern: `^v[1-9][0-9]*(\.[A-Za-z0-9-]*)?$`
 	// +kubebuilder:validation:Optional
 	DefaultVersionID *string `json:"defaultVersionID,omitempty"`
 	// Specifies whether the policy can be attached to an IAM user, group, or role.
@@ -144,6 +151,8 @@ type PolicyStatus struct {
 	//
 	// For more information about IDs, see IAM identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
 	// in the IAM User Guide.
+	//
+	// Regex Pattern: `^[\w]+$`
 	// +kubebuilder:validation:Optional
 	PolicyID *string `json:"policyID,omitempty"`
 	// The date and time, in ISO 8601 date-time format (http://www.iso.org/iso/iso8601),

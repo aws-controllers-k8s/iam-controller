@@ -61,6 +61,8 @@ spec:
                   IAM user, group, role, and policy names must be unique within the account.
                   Names are not distinguished by case. For example, you cannot create resources
                   named both "MyResource" and "myresource".
+
+                  Regex Pattern: `^[\w+=,.@-]+$`
                 type: string
               path:
                 description: |-
@@ -77,6 +79,8 @@ spec:
                   can contain any ASCII character from the ! (\u0021) through the DEL character
                   (\u007F), including most punctuation characters, digits, and upper and lowercased
                   letters.
+
+                  Regex Pattern: `^(\u002F)|(\u002F[\u0021-\u007E]+\u002F)$`
                 type: string
               permissionsBoundary:
                 description: |-
@@ -259,6 +263,8 @@ spec:
                   The stable and unique string identifying the user. For more information about
                   IDs, see IAM identifiers (https://docs.aws.amazon.com/IAM/latest/UserGuide/Using_Identifiers.html)
                   in the IAM User Guide.
+
+                  Regex Pattern: `^[\w]+$`
                 type: string
             type: object
         type: object
