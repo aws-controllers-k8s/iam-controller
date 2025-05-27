@@ -91,7 +91,7 @@ func (r *resource) SetIdentifiers(identifier *ackv1alpha1.AWSIdentifiers) error 
 	if !ok {
 		return ackerrors.NewTerminalError(fmt.Errorf("required field missing: roleName"))
 	}
-	r.ko.Spec.AWSServiceName = &tmp
+	r.ko.Status.RoleName = &tmp
 
 	return nil
 }
