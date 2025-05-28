@@ -77,6 +77,7 @@ rules:
   - openidconnectproviders
   - policies
   - roles
+  - servicelinkedroles
   - users
   verbs:
   - create
@@ -94,6 +95,7 @@ rules:
   - openidconnectproviders/status
   - policies/status
   - roles/status
+  - servicelinkedroles/status
   - users/status
   verbs:
   - get

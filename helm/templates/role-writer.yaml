@@ -14,6 +14,7 @@ rules:
   - openidconnectproviders
   - policies
   - roles
+  - servicelinkedroles
   - users
   verbs:
   - create
@@ -31,6 +32,7 @@ rules:
   - openidconnectproviders
   - policies
   - roles
+  - servicelinkedroles
   - users
   verbs:
   - get
