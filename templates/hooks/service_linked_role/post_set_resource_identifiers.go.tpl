@@ -2,4 +2,4 @@
 	if !ok {
 		return ackerrors.NewTerminalError(fmt.Errorf("required field missing: roleName"))
 	}
-	r.ko.Status.RoleName = &tmp
+	r.ko.Spec.AWSServiceName = &tmp
