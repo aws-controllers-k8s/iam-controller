@@ -80,7 +80,6 @@ class TestServiceLinkedRole:
         latest = role.get(role_name)
 
         assert latest is not None
-        print(latest)
         assert latest['Description'] == "a service-linked role"
         assert latest['Path'] == "/aws-service-role/elasticbeanstalk.amazonaws.com/"
 
