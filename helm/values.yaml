@@ -147,6 +147,7 @@ reconcile:
     - OpenIDConnectProvider
     - Policy
     - Role
+    - ServiceLinkedRole
     - User
 
 serviceAccount:
