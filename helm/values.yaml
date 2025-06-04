@@ -81,7 +81,6 @@ resources:
     cpu: "50m"
   limits:
     memory: "128Mi"
-    cpu: "100m"
 
 aws:
   # If specified, use the AWS region for AWS API calls

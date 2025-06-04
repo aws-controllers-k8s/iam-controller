@@ -144,12 +144,6 @@
                 { "type": "number" },
                 { "type": "string" }
               ]
-            },
-            "cpu": {
-              "oneOf": [
-                { "type": "number" },
-                { "type": "string" }
-              ]
             }
           },
           "required": [
