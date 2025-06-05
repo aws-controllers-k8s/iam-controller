@@ -147,8 +147,7 @@
             }
           },
           "required": [
-              "memory",
-              "cpu"
+              "memory"
           ],
           "type": "object"
         }
