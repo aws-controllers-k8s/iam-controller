@@ -1,0 +1,167 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.2
+  name: loginprofiles.iam.services.k8s.aws
+spec:
+  group: iam.services.k8s.aws
+  names:
+    kind: LoginProfile
+    listKind: LoginProfileList
+    plural: loginprofiles
+    singular: loginprofile
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: LoginProfile is the Schema for the LoginProfiles API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              LoginProfileSpec defines the desired state of LoginProfile.
+
+              Contains the user name and password create date for a user.
+
+              This data type is used as a response element in the CreateLoginProfile and
+              GetLoginProfile operations.
+            properties:
+              name:
+                description: |-
+                  The name of the IAM user to create a password for. The user must already
+                  exist.
+
+                  This parameter is optional. If no user name is included, it defaults to the
+                  principal making the request. When you make this request with root user credentials,
+                  you must use an AssumeRoot (https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoot.html)
+                  session to omit the user name.
+
+                  This parameter allows (through its regex pattern (http://wikipedia.org/wiki/regex))
+                  a string of characters consisting of upper and lowercase alphanumeric characters
+                  with no spaces. You can also include any of the following characters: _+=,.@-
+
+                  Regex Pattern: `^[\w+=,.@-]+$`
+                type: string
+                x-kubernetes-validations:
+                - message: Value is immutable once set
+                  rule: self == oldSelf
+              password:
+                description: |-
+                  The new password for the user.
+
+                  This parameter must be omitted when you make the request with an AssumeRoot
+                  (https://docs.aws.amazon.com/STS/latest/APIReference/API_AssumeRoot.html)
+                  session. It is required in all other cases.
+
+                  The regex pattern (http://wikipedia.org/wiki/regex) that is used to validate
+                  this parameter is a string of characters. That string can include almost
+                  any printable ASCII character from the space (\u0020) through the end of
+                  the ASCII character range (\u00FF). You can also include the tab (\u0009),
+                  line feed (\u000A), and carriage return (\u000D) characters. Any of these
+                  characters are valid in a password. However, many tools, such as the Amazon
+                  Web Services Management Console, might restrict the ability to type certain
+                  characters because they have special meaning within that tool.
+
+                  Regex Pattern: `^[\u0009\u000A\u000D\u0020-\u00FF]+$`
+                type: string
+              passwordResetRequired:
+                description: Specifies whether the user is required to set a new password
+                  on next sign-in.
+                type: boolean
+            type: object
+          status:
+            description: LoginProfileStatus defines the observed state of LoginProfile
+            properties:
+              ackResourceMetadata:
+                description: |-
+                  All CRs managed by ACK have a common `Status.ACKResourceMetadata` member
+                  that is used to contain resource sync state, account ownership,
+                  constructed ARN for the resource
+                properties:
+                  arn:
+                    description: |-
+                      ARN is the Amazon Resource Name for the resource. This is a
+                      globally-unique identifier and is set only by the ACK service controller
+                      once the controller has orchestrated the creation of the resource OR
+                      when it has verified that an "adopted" resource (a resource where the
+                      ARN annotation was set by the Kubernetes user on the CR) exists and
+                      matches the supplied CR's Spec field values.
+                      https://github.com/aws/aws-controllers-k8s/issues/270
+                    type: string
+                  ownerAccountID:
+                    description: |-
+                      OwnerAccountID is the AWS Account ID of the account that owns the
+                      backend AWS service API resource.
+                    type: string
+                  region:
+                    description: Region is the AWS region in which the resource exists
+                      or will exist.
+                    type: string
+                required:
+                - ownerAccountID
+                - region
+                type: object
+              conditions:
+                description: |-
+                  All CRs managed by ACK have a common `Status.Conditions` member that
+                  contains a collection of `ackv1alpha1.Condition` objects that describe
+                  the various terminal states of the CR and its backend AWS service API
+                  resource
+                items:
+                  description: |-
+                    Condition is the common struct used by all CRDs managed by ACK service
+                    controllers to indicate terminal states  of the CR and its backend AWS
+                    service API resource
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type is the type of the Condition
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              createDate:
+                description: The date when the password for the user was created.
+                format: date-time
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

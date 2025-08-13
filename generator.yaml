@@ -4,7 +4,7 @@ ignore:
    - AccountAlias
    #- Group
    #- InstanceProfile
-   - LoginProfile
+   #- LoginProfile  # Removed from ignore list
    #- OpenIDConnectProvider
    #- Policy
    - PolicyVersion
@@ -116,6 +116,39 @@ resources:
     # the profile entirely.
     update_operation:
       custom_method_name: customUpdateInstanceProfile
+  LoginProfile:
+    renames:
+      operations:
+        CreateLoginProfile:
+          input_fields:
+            UserName: Name
+        GetLoginProfile:
+          input_fields:
+            UserName: Name
+        UpdateLoginProfile:
+          input_fields:
+            UserName: Name
+        DeleteLoginProfile:
+          input_fields:
+            UserName: Name
+    exceptions:
+      errors:
+        404:
+          code: NoSuchEntityException
+      terminal_codes:
+        - EntityAlreadyExistsException
+        - NoSuchEntityException
+        - PasswordPolicyViolation
+    fields:
+      Name:
+        is_primary_key: true
+        is_immutable: true
+      CreateDate:
+        is_read_only: true
+      Password:
+        is_sensitive: true
+    tags:
+      ignore: true
   Policy:
     renames:
       operations:

@@ -4,6 +4,7 @@ resources:
   - common
   - bases/iam.services.k8s.aws_groups.yaml
   - bases/iam.services.k8s.aws_instanceprofiles.yaml
+  - bases/iam.services.k8s.aws_loginprofiles.yaml
   - bases/iam.services.k8s.aws_openidconnectproviders.yaml
   - bases/iam.services.k8s.aws_policies.yaml
   - bases/iam.services.k8s.aws_roles.yaml

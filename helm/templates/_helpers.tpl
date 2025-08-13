@@ -74,6 +74,7 @@ rules:
   resources:
   - groups
   - instanceprofiles
+  - loginprofiles
   - openidconnectproviders
   - policies
   - roles
@@ -92,6 +93,7 @@ rules:
   resources:
   - groups/status
   - instanceprofiles/status
+  - loginprofiles/status
   - openidconnectproviders/status
   - policies/status
   - roles/status
