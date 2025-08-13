@@ -9,7 +9,7 @@ ignore:
    #- Policy
    - PolicyVersion
    #- Role
-   - SAMLProvider
+   #- SAMLProvider
    #- ServiceLinkedRole
    - ServiceSpecificCredential
    #- User
@@ -148,31 +148,7 @@ resources:
         - InvalidInput
         - MalformedPolicyDocument
     fields:
-      # Left for historical purposes. It looks like late_initialize is was
-      # causing the controller to infinitely requeue (every 5 seconds) when the
-      # description was set to nil. Not it looks like this is not needed
-      # anymore.
-      # Note(a-hilaly): Very likely the API behavior has changed and the
-      # late_initialize is no longer needed.
-      #
       Description:
-        # You might be wondering why description is late-initialized, since
-        # there isn't a default server-side value for description.
-        #
-        # The CreatePolicy API call accepts a Description field in the input
-        # and the documentation (and API model) say that a Description field is
-        # included in the returned response from CreatePolicy, however the
-        # Description returned from the CreatePolicy API call is always
-        # missing/nil which means the SetResource code sets the
-        # Spec.Description to nil. When the next time the GetPolicy API call is
-        # made in the next reconciliation loop, GetPolicy returns the
-        # description that was originally set in the CreatePolicy API call and
-        # a Delta difference is discovered erroneously (because the SetResource
-        # call after CreatePolicy incorrectly set the description to nil). So,
-        # we set the late initialize property of the Description field here to
-        # override the Spec.Description to the original value we set in the
-        # CreatePolicy *input* shape.
-        #late_initialize: {}
         set:
         - ignore: true
           method: Create
@@ -221,13 +197,10 @@ resources:
         set:
           # The input and output shapes are different...
           - from: PermissionsBoundary.PermissionsBoundaryArn
-      # Left for historical purposes.
       Description:
         set:
         - ignore: true
           method: Create
-        # See above in Policy resource about why this is here.
-        # late_initialize: {}
       Path:
         late_initialize: {}
       # In order to support attaching zero or more policies to a role, we use
@@ -282,6 +255,31 @@ resources:
           is_ignored: true
     update_operation:
       custom_method_name: customUpdateOpenIDConnectProvider
+  SAMLProvider:
+    hooks:
+      sdk_create_post_set_output:
+        template_path: hooks/saml_provider/sdk_create_post_set_output.go.tpl
+      sdk_update_pre_build_request:
+        template_path: hooks/saml_provider/sdk_update_pre_build_request.go.tpl
+      sdk_read_one_post_set_output:
+        template_path: hooks/saml_provider/sdk_read_one_post_set_output.go.tpl
+    exceptions:
+      errors:
+        404:
+          code: NoSuchEntityException
+      terminal_codes:
+        - InvalidInputException
+        - EntityAlreadyExistsException
+    fields:
+      SAMLProviderArn:
+        is_arn_primary_key: true
+      Name:
+        is_immutable: true
+        is_primary_key: true
+      CreateDate:
+        is_read_only: true
+      ValidUntil:
+        is_read_only: true
   User:
     hooks:
       delta_pre_compare:

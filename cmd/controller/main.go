@@ -44,6 +44,7 @@ import (
 	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/open_id_connect_provider"
 	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/policy"
 	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/role"
+	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/saml_provider"
 	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/service_linked_role"
 	_ "github.com/aws-controllers-k8s/iam-controller/pkg/resource/user"
 
