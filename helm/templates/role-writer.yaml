@@ -21,6 +21,7 @@ rules:
   - openidconnectproviders
   - policies
   - roles
+  - samlproviders
   - servicelinkedroles
   - users
   verbs:
@@ -39,6 +40,7 @@ rules:
   - openidconnectproviders
   - policies
   - roles
+  - samlproviders
   - servicelinkedroles
   - users
   verbs:
