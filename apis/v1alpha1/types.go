@@ -215,7 +215,7 @@ type InstanceProfile_SDK struct {
 //
 // This data type is used as a response element in the CreateLoginProfile and
 // GetLoginProfile operations.
-type LoginProfile struct {
+type LoginProfile_SDK struct {
 	CreateDate            *metav1.Time `json:"createDate,omitempty"`
 	PasswordResetRequired *bool        `json:"passwordResetRequired,omitempty"`
 	UserName              *string      `json:"userName,omitempty"`
@@ -281,6 +281,7 @@ type OrganizationsDecisionDetail struct {
 type PasswordPolicy struct {
 	AllowUsersToChangePassword *bool `json:"allowUsersToChangePassword,omitempty"`
 	ExpirePasswords            *bool `json:"expirePasswords,omitempty"`
+	HardExpiry                 *bool `json:"hardExpiry,omitempty"`
 	RequireLowercaseCharacters *bool `json:"requireLowercaseCharacters,omitempty"`
 	RequireNumbers             *bool `json:"requireNumbers,omitempty"`
 	RequireSymbols             *bool `json:"requireSymbols,omitempty"`

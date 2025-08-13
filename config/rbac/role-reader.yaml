@@ -11,6 +11,7 @@ rules:
   resources:
   - groups
   - instanceprofiles
+  - loginprofiles
   - openidconnectproviders
   - policies
   - roles
