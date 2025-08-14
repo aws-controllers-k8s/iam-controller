@@ -4,7 +4,7 @@
 
 image:
   repository: public.ecr.aws/aws-controllers-k8s/iam-controller
-  tag: 1.4.4
+  tag: 1.4.5
   pullPolicy: IfNotPresent
   pullSecrets: []
 
@@ -182,6 +182,6 @@ featureGates:
   # Enables the Team level granularity for CARM. See https://github.com/aws-controllers-k8s/community/issues/2031
   TeamLevelCARM: false
   # Enable ReadOnlyResources feature/annotation. 
-  ReadOnlyResources: false
+  ReadOnlyResources: true
   # Enable ResourceAdoption feature/annotation. 
-  ResourceAdoption: false
+  ResourceAdoption: true
