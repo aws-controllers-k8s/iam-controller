@@ -245,7 +245,7 @@ class TestPolicy:
     def test_policy_adopt_update(self, adopt_policy):
         ref, cr, policy_arn = adopt_policy
 
-        k8s.wait_on_condition(ref, "ACK.ResourceSynced", "True", wait_periods=5)
+        k8s.wait_on_condition(ref, "Ready", "True", wait_periods=5)
 
         assert cr is not None
         assert 'status' in cr
@@ -282,7 +282,7 @@ class TestPolicy:
     def test_policy_adopt_or_create(self, adopt_policy):
         ref, cr, policy_arn = adopt_policy
 
-        k8s.wait_on_condition(ref, "ACK.ResourceSynced", "True", wait_periods=5)
+        k8s.wait_on_condition(ref, "Ready", "True", wait_periods=5)
 
         assert cr is not None
         assert 'status' in cr
