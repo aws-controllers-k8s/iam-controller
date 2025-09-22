@@ -122,7 +122,7 @@ class TestRole:
         role_name = ref.name
 
         time.sleep(CREATE_WAIT_SECONDS)
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
         condition.assert_type_status(
             ref,
             cond_type_match=condition.CONDITION_TYPE_LATE_INITIALIZED,
@@ -136,7 +136,7 @@ class TestRole:
         }
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_SECONDS)
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         latest = role.get(role_name)
         assert latest is not None
@@ -146,7 +146,7 @@ class TestRole:
         ref, res = policy_with_no_description
 
         time.sleep(CREATE_WAIT_SECONDS)
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
         condition.assert_type_status(
             ref,
             cond_type_match=condition.CONDITION_TYPE_LATE_INITIALIZED,
