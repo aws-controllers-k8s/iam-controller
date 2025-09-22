@@ -129,7 +129,7 @@ class TestPolicy:
 
         time.sleep(CHECK_WAIT_AFTER_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         # check update code path for tags...
         latest_tags = policy.get_tags(policy_arn)
@@ -152,7 +152,7 @@ class TestPolicy:
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         latest_tags = policy.get_tags(policy_arn)
         after_update_expected_tags = [
@@ -174,7 +174,7 @@ class TestPolicy:
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         latest_tags = policy.get_tags(policy_arn)
         after_update_expected_tags = [
@@ -229,7 +229,7 @@ class TestPolicy:
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         cr = k8s.get_resource(ref)
         assert cr is not None
@@ -245,7 +245,7 @@ class TestPolicy:
     def test_policy_adopt_update(self, adopt_policy):
         ref, cr, policy_arn = adopt_policy
 
-        k8s.wait_on_condition(ref, "ACK.ResourceSynced", "True", wait_periods=5)
+        k8s.wait_on_condition(ref, "Ready", "True", wait_periods=5)
 
         assert cr is not None
         assert 'status' in cr
@@ -282,7 +282,7 @@ class TestPolicy:
     def test_policy_adopt_or_create(self, adopt_policy):
         ref, cr, policy_arn = adopt_policy
 
-        k8s.wait_on_condition(ref, "ACK.ResourceSynced", "True", wait_periods=5)
+        k8s.wait_on_condition(ref, "Ready", "True", wait_periods=5)
 
         assert cr is not None
         assert 'status' in cr
