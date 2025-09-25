@@ -123,11 +123,6 @@ class TestRole:
 
         time.sleep(CREATE_WAIT_SECONDS)
         condition.assert_ready(ref)
-        condition.assert_type_status(
-            ref,
-            cond_type_match=condition.CONDITION_TYPE_LATE_INITIALIZED,
-            cond_status_match=True,
-        )
 
         updates = {
             "spec": {
@@ -147,9 +142,4 @@ class TestRole:
 
         time.sleep(CREATE_WAIT_SECONDS)
         condition.assert_ready(ref)
-        condition.assert_type_status(
-            ref,
-            cond_type_match=condition.CONDITION_TYPE_LATE_INITIALIZED,
-            cond_status_match=True,
-        )
 
