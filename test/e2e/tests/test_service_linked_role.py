@@ -74,7 +74,7 @@ class TestServiceLinkedRole:
 
         time.sleep(CHECK_STATUS_WAIT_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         # Validate the service-linked role exists
         latest = role.get(role_name)
@@ -92,7 +92,7 @@ class TestServiceLinkedRole:
         k8s.patch_custom_resource(ref, updates)
         time.sleep(CHECK_STATUS_WAIT_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         latest = role.get(role_name)
         assert latest is not None
