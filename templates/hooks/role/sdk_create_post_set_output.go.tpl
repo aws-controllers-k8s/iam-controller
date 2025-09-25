@@ -5,4 +5,8 @@
             ko.Spec.AssumeRolePolicyDocument = &doc
         }
     }
+	err = rm.attachPolicies(ctx, &resource{ko})
+	if err != nil {
+		return &resource{ko}, err
+	}
     ackcondition.SetSynced(&resource{ko}, corev1.ConditionFalse, nil, nil)
