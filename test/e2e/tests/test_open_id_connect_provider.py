@@ -108,7 +108,7 @@ class TestOpenIdConnectProvider:
 
         time.sleep(CHECK_STATUS_WAIT_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         latest_oidcp_boto3 = open_id_connect_provider.get(oidc_provider_arn)
 

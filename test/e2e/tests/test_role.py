@@ -107,7 +107,7 @@ class TestRole:
 
         time.sleep(CHECK_STATUS_WAIT_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         # Before we update the Role CR below, let's check to see that the
         # MaxSessionDuration field in the CR is still what we set in the
@@ -122,7 +122,7 @@ class TestRole:
         assert 'description' in cr['spec']
         assert cr['spec']['description'] == ROLE_DESC
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         latest = role.get(role_name)
         assert latest is not None
@@ -142,7 +142,7 @@ class TestRole:
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         latest = role.get(role_name)
         assert latest is not None
@@ -163,7 +163,7 @@ class TestRole:
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         latest_policy_arns = role.get_attached_policy_arns(role_name)
         assert latest_policy_arns == policy_arns
@@ -192,7 +192,7 @@ class TestRole:
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         after_update_expected_tags = [
             {
@@ -297,7 +297,7 @@ class TestRole:
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         cr = k8s.get_resource(ref)
         assert cr is not None
@@ -331,7 +331,7 @@ class TestRole:
         assert assume_role_policy_as_obj == k8s_assume_role_policy
 
         # make sure the resource is not in an "update infinite loop"
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         assume_role_policy_to_deny_doc = '''{
     "Version": "2012-10-17",
@@ -354,7 +354,7 @@ class TestRole:
         k8s.patch_custom_resource(ref, updates)
         time.sleep(MODIFY_WAIT_AFTER_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         cr = k8s.get_resource(ref)
         assert cr is not None
@@ -373,13 +373,13 @@ class TestRole:
         # Assume role policies cannot be entirely deleted, so CRU is tested here.
 
         # make sure the resource is not in an "update infinite loop"
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
     
     def test_role_adopt(self, adopt_role):
         ref, cr = adopt_role
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         assert cr is not None
         assert 'status' in cr

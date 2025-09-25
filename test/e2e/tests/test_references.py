@@ -171,8 +171,8 @@ class TestReferences:
 
         time.sleep(CHECK_WAIT_AFTER_REF_RESOLVE_SECONDS)
 
-        condition.assert_synced(policy_ref)
-        condition.assert_synced(role_ref)
+        condition.assert_ready(policy_ref)
+        condition.assert_ready(role_ref)
 
         role.wait_until_exists(role_name)
 
@@ -205,8 +205,8 @@ class TestReferences:
 
         time.sleep(CHECK_WAIT_AFTER_REF_RESOLVE_SECONDS)
 
-        condition.assert_synced(policy_ref)
-        condition.assert_synced(role_ref)
+        condition.assert_ready(policy_ref)
+        condition.assert_ready(role_ref)
 
         role.wait_until_exists(role_name)
 

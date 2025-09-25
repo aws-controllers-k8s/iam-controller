@@ -75,7 +75,7 @@ class TestGroup:
 
         time.sleep(CHECK_STATUS_WAIT_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         latest_policy_arns = group.get_attached_policy_arns(group_name)
         assert latest_policy_arns == []

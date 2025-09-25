@@ -76,7 +76,7 @@ class TestUser:
 
         time.sleep(CHECK_STATUS_WAIT_SECONDS)
 
-        condition.assert_synced(ref)
+        condition.assert_ready(ref)
 
         latest = user.get(user_name)
         assert latest is not None
