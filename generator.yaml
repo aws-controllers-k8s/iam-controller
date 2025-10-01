@@ -277,6 +277,8 @@ resources:
         is_immutable: true
         compare:
           is_ignored: true
+      Thumbprints:
+        late_initialize: {}
       Tags:
         compare:
           is_ignored: true
