@@ -15,6 +15,7 @@
 
 import logging
 import time
+import boto3
 
 import pytest
 
@@ -25,12 +26,19 @@ from e2e import service_marker, CRD_GROUP, CRD_VERSION, load_resource
 from e2e.replacement_values import REPLACEMENT_VALUES
 from e2e import open_id_connect_provider
 from e2e import tag
+from e2e.bootstrap_resources import get_bootstrap_resources
 
 RESOURCE_PLURAL = "openidconnectproviders"
 
 DELETE_WAIT_AFTER_SECONDS = 5
 CHECK_STATUS_WAIT_SECONDS = 5
 MODIFY_WAIT_AFTER_SECONDS = 10
+
+
+def get_cognito_user_pool_well_known_url(region: str, user_pool_id: str):
+    """Returns the JWKS URL for token verification."""
+    return f"https://cognito-idp.{region}.amazonaws.com/{user_pool_id}"
+
 
 
 @pytest.fixture
@@ -79,6 +87,45 @@ def oidc_provider():
     except:
         pass
 
+@pytest.fixture
+def oidc_provider_no_thumbprint(iam_client):
+    oidc_provider_name = random_suffix_name("oidc-provider-ack-test", 24)
+
+    replacements = REPLACEMENT_VALUES.copy()
+    replacements["OPEN_ID_CONNECT_PROVIDER_NAME"] = oidc_provider_name
+
+    region = boto3.Session().region_name
+    cognito_user_pool_id = get_bootstrap_resources().OIDCProviderUserPool.user_pool_id
+    replacements["URL"] = get_cognito_user_pool_well_known_url(region, cognito_user_pool_id)
+
+    replacements["CLIENT_ID"] = "phippy"
+    replacements["TAG_KEY"] = "tag1"
+    replacements["TAG_VALUE"] = "val1"
+
+    resource_data = load_resource(
+        "open_id_connect_provider_no_thumbprint",
+        additional_replacements=replacements,
+    )
+
+    ref = k8s.CustomResourceReference(
+        CRD_GROUP,
+        CRD_VERSION,
+        RESOURCE_PLURAL,
+        oidc_provider_name,
+        namespace="default",
+    )
+    k8s.create_custom_resource(ref, resource_data)
+    cr = k8s.wait_resource_consumed_by_controller(ref)
+
+    yield (ref, cr)
+
+    # Delete the OIDC provider when tests complete
+    try:
+        _, deleted = k8s.delete_custom_resource(ref, 3, 10)
+        assert deleted
+    except:
+        pass
+
 
 def assert_url_equals_ignore_prefix(url, match):
     if url.startswith("https://"):
@@ -90,6 +137,46 @@ def assert_url_equals_ignore_prefix(url, match):
 @service_marker
 @pytest.mark.canary
 class TestOpenIdConnectProvider:
+
+    def test_without_thumbprint(self, oidc_provider_no_thumbprint):
+        (ref, cr) = oidc_provider_no_thumbprint
+
+        k8s.wait_on_condition(ref, condition.CONDITION_TYPE_RESOURCE_SYNCED, "True")
+        cr = k8s.get_resource(ref)
+        condition.assert_synced(ref)
+
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert "thumbprints" in cr["spec"]
+        assert len(cr["spec"]["thumbprints"]) > 0
+
+
+        assert "status" in cr
+        assert "ackResourceMetadata" in cr["status"]
+        assert "arn" in cr["status"]["ackResourceMetadata"]
+        oidc_provider_arn = cr["status"]["ackResourceMetadata"]["arn"]
+
+        latest_oidcp_boto3 = open_id_connect_provider.get(oidc_provider_arn)
+        assert latest_oidcp_boto3 is not None
+        assert len(latest_oidcp_boto3["ThumbprintList"]) == len(cr["spec"]["thumbprints"])
+        assert set(latest_oidcp_boto3["ThumbprintList"]) == set(cr["spec"]["thumbprints"])
+
+        # Trigger reconcile with an update to tags.
+        updates = {
+            "spec": {
+                "tags": [{"key": "key2", "value": "val2"}],
+            },
+        }
+
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+        k8s.wait_on_condition(ref, condition.CONDITION_TYPE_RESOURCE_SYNCED, "True")
+        condition.assert_synced(ref)
+
+        after_update_expected_tags = [{"Key": "key2", "Value": "val2"}]
+        latest_tags = open_id_connect_provider.get_tags(oidc_provider_arn)
+        assert tag.cleaned(latest_tags) == after_update_expected_tags
+
     def test_crud(self, oidc_provider):
         (ref, cr) = oidc_provider
 

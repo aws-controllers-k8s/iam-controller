@@ -19,6 +19,7 @@ import json
 
 from acktest.bootstrapping import Resources, BootstrapFailureException
 from acktest.bootstrapping.iam import UserPolicies, Role
+from acktest.bootstrapping.cognito_identity import UserPool
 from e2e import bootstrap_directory
 from e2e.bootstrap_resources import BootstrapResources
 
@@ -38,7 +39,8 @@ def service_bootstrap() -> Resources:
     })
     resources = BootstrapResources(
         AdoptedPolicy=UserPolicies("adopted-policies", policy_documents=[sample_policy]),
-        AdoptedRole=Role("adopted-role", "eks.amazonaws.com", managed_policies=["arn:aws:iam::aws:policy/AmazonSQSFullAccess", "arn:aws:iam::aws:policy/AmazonEC2FullAccess"])
+        AdoptedRole=Role("adopted-role", "eks.amazonaws.com", managed_policies=["arn:aws:iam::aws:policy/AmazonSQSFullAccess", "arn:aws:iam::aws:policy/AmazonEC2FullAccess"]),
+        OIDCProviderUserPool=UserPool(name_prefix="oidc-test-pool")
     )
 
     try:
