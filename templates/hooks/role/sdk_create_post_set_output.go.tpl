@@ -5,4 +5,4 @@
             ko.Spec.AssumeRolePolicyDocument = &doc
         }
     }
-    ackcondition.SetSynced(&resource{ko}, corev1.ConditionFalse, nil, nil)
+    return &resource{ko}, ackrequeue.Needed(fmt.Errorf("role created, requeuing to trigger updates"))
