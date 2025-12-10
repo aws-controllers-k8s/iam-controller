@@ -298,3 +298,124 @@ func (rm *resourceManager) removeInlinePolicy(
 func decodeDocument(encoded string) (string, error) {
 	return url.QueryUnescape(encoded)
 }
+
+// getUsers returns the list of user names currently in the Group.
+// The GetGroup API can return paginated results when a group has many users,
+// so this function handles pagination using IsTruncated/Marker.
+func (rm *resourceManager) getUsers(
+	ctx context.Context,
+	r *resource,
+) ([]*string, error) {
+	var err error
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.getUsers")
+	defer func() { exit(err) }()
+
+	input := &svcsdk.GetGroupInput{}
+	input.GroupName = r.ko.Spec.Name
+	res := []*string{}
+
+	var marker *string
+	for {
+		if marker != nil {
+			input.Marker = marker
+		}
+		resp, err := rm.sdkapi.GetGroup(ctx, input)
+		rm.metrics.RecordAPICall("READ_ONE", "GetGroup", err)
+		if err != nil {
+			return nil, err
+		}
+		for _, u := range resp.Users {
+			res = append(res, u.UserName)
+		}
+		if !resp.IsTruncated {
+			break
+		}
+		marker = resp.Marker
+	}
+	return res, nil
+}
+
+
+// addUser adds the supplied user to the supplied Group resource
+func (rm *resourceManager) addUser(
+	ctx context.Context,
+	r *resource,
+	userName *string,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.addUser")
+	defer func() { exit(err) }()
+
+	input := &svcsdk.AddUserToGroupInput{}
+	input.GroupName = r.ko.Spec.Name
+	input.UserName = userName
+	_, err = rm.sdkapi.AddUserToGroup(ctx, input)
+	rm.metrics.RecordAPICall("UPDATE", "AddUserToGroup", err)
+	return err
+}
+
+
+// removeUser removes the supplied user from the supplied Group resource
+func (rm *resourceManager) removeUser(
+	ctx context.Context,
+	r *resource,
+	userName *string,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.removeUser")
+	defer func() { exit(err) }()
+
+	input := &svcsdk.RemoveUserFromGroupInput{}
+	input.GroupName = r.ko.Spec.Name
+	input.UserName = userName
+	_, err = rm.sdkapi.RemoveUserFromGroup(ctx, input)
+	rm.metrics.RecordAPICall("UPDATE", "RemoveUserFromGroup", err)
+	return err
+}
+
+
+// syncUsers examines the Users in the supplied Group and calls the
+// AddUserToGroup and RemoveUserFromGroup APIs to ensure that the set of
+// users stays in sync with the Group.Spec.Users field, which is a list
+// of strings containing user names.
+func (rm *resourceManager) syncUsers(
+	ctx context.Context,
+	desired *resource,
+	latest *resource,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.syncUsers")
+	defer func() { exit(err) }()
+	toAdd := []*string{}
+	toDelete := []*string{}
+
+	existingUsers := latest.ko.Spec.Users
+
+	for _, u := range desired.ko.Spec.Users {
+		if !ackutil.InStringPs(*u, existingUsers) {
+			toAdd = append(toAdd, u)
+		}
+	}
+
+	for _, u := range existingUsers {
+		if !ackutil.InStringPs(*u, desired.ko.Spec.Users) {
+			toDelete = append(toDelete, u)
+		}
+	}
+
+	for _, u := range toAdd {
+		rlog.Debug("adding user to group", "user_name", *u)
+		if err = rm.addUser(ctx, desired, u); err != nil {
+			return err
+		}
+	}
+	for _, u := range toDelete {
+		rlog.Debug("removing user from group", "user_name", *u)
+		if err = rm.removeUser(ctx, desired, u); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

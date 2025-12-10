@@ -149,3 +149,31 @@ def get_inline_policies(user_name):
         return policies
     except c.exceptions.NoSuchEntityException:
         return None
+
+
+def create_test_user(user_name):
+    """Creates a test IAM user for group membership tests.
+
+    Returns the created user dict, or None if creation failed.
+    """
+    c = boto3.client('iam')
+    try:
+        resp = c.create_user(UserName=user_name)
+        return resp['User']
+    except c.exceptions.EntityAlreadyExistsException:
+        return get(user_name)
+
+
+def delete_test_user(user_name):
+    """Deletes a test IAM user.
+
+    Returns True if deletion succeeded, False otherwise.
+    """
+    c = boto3.client('iam')
+    try:
+        c.delete_user(UserName=user_name)
+        return True
+    except c.exceptions.NoSuchEntityException:
+        return True
+    except Exception:
+        return False

@@ -135,3 +135,21 @@ def get_inline_policies(group_name):
         return policies
     except c.exceptions.NoSuchEntityException:
         return None
+
+
+def get_users(group_name):
+    """Returns a list containing the user names that are members of the
+    supplied Group.
+
+    If no such Group exists, returns None.
+    """
+    c = boto3.client('iam')
+    try:
+        users = []
+        paginator = c.get_paginator('get_group')
+        for page in paginator.paginate(GroupName=group_name):
+            for user in page['Users']:
+                users.append(user['UserName'])
+        return users
+    except c.exceptions.NoSuchEntityException:
+        return None
