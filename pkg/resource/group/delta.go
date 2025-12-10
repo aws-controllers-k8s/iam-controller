@@ -74,6 +74,9 @@ func newResourceDelta(
 	if !reflect.DeepEqual(a.ko.Spec.PolicyRefs, b.ko.Spec.PolicyRefs) {
 		delta.Add("Spec.PolicyRefs", a.ko.Spec.PolicyRefs, b.ko.Spec.PolicyRefs)
 	}
+	if !reflect.DeepEqual(a.ko.Spec.UserRefs, b.ko.Spec.UserRefs) {
+		delta.Add("Spec.UserRefs", a.ko.Spec.UserRefs, b.ko.Spec.UserRefs)
+	}
 
 	return delta
 }

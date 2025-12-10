@@ -126,6 +126,10 @@ func (rm *resourceManager) sdkFind(
 	if err != nil {
 		return nil, err
 	}
+	ko.Spec.Users, err = rm.getUsers(ctx, &resource{ko})
+	if err != nil {
+		return nil, err
+	}
 
 	return &resource{ko}, nil
 }
@@ -261,7 +265,13 @@ func (rm *resourceManager) sdkUpdate(
 			return nil, err
 		}
 	}
-	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.InlinePolicies", "Spec.PermissionsBoundary") {
+	if delta.DifferentAt("Spec.Users") {
+		err = rm.syncUsers(ctx, desired, latest)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.InlinePolicies", "Spec.Users", "Spec.PermissionsBoundary") {
 		return desired, nil
 	}
 
@@ -322,7 +332,7 @@ func (rm *resourceManager) sdkDelete(
 	defer func() {
 		exit(err)
 	}()
-	// This deletes all associated managed and inline policies from the user
+	// This deletes all associated managed and inline policies and removes all users from the group
 	groupCpy := r.ko.DeepCopy()
 	groupCpy.Spec.Policies = nil
 	if err := rm.syncManagedPolicies(ctx, &resource{ko: groupCpy}, r); err != nil {
@@ -330,6 +340,10 @@ func (rm *resourceManager) sdkDelete(
 	}
 	groupCpy.Spec.InlinePolicies = map[string]*string{}
 	if err := rm.syncInlinePolicies(ctx, &resource{ko: groupCpy}, r); err != nil {
+		return nil, err
+	}
+	groupCpy.Spec.Users = nil
+	if err := rm.syncUsers(ctx, &resource{ko: groupCpy}, r); err != nil {
 		return nil, err
 	}
 

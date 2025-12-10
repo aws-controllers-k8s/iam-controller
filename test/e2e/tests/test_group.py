@@ -224,13 +224,12 @@ def group_with_users(test_user_for_group):
 
     replacements = REPLACEMENT_VALUES.copy()
     replacements['GROUP_NAME'] = group_name
+    replacements['USER_NAME'] = user_name
 
     resource_data = load_resource(
-        "group_simple",
+        "group_with_users",
         additional_replacements=replacements,
     )
-    # Add users to the spec
-    resource_data['spec']['users'] = [user_name]
 
     ref = k8s.CustomResourceReference(
         CRD_GROUP, CRD_VERSION, GROUP_RESOURCE_PLURAL,
@@ -348,12 +347,12 @@ class TestGroupUsers:
 
         replacements = REPLACEMENT_VALUES.copy()
         replacements['GROUP_NAME'] = group_name
+        replacements['USER_NAME'] = user_name
 
         resource_data = load_resource(
-            "group_simple",
+            "group_with_users",
             additional_replacements=replacements,
         )
-        resource_data['spec']['users'] = [user_name]
 
         ref = k8s.CustomResourceReference(
             CRD_GROUP, CRD_VERSION, GROUP_RESOURCE_PLURAL,

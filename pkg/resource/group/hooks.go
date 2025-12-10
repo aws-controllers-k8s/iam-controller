@@ -336,7 +336,6 @@ func (rm *resourceManager) getUsers(
 	return res, nil
 }
 
-
 // addUser adds the supplied user to the supplied Group resource
 func (rm *resourceManager) addUser(
 	ctx context.Context,
@@ -355,7 +354,6 @@ func (rm *resourceManager) addUser(
 	return err
 }
 
-
 // removeUser removes the supplied user from the supplied Group resource
 func (rm *resourceManager) removeUser(
 	ctx context.Context,
@@ -373,7 +371,6 @@ func (rm *resourceManager) removeUser(
 	rm.metrics.RecordAPICall("UPDATE", "RemoveUserFromGroup", err)
 	return err
 }
-
 
 // syncUsers examines the Users in the supplied Group and calls the
 // AddUserToGroup and RemoveUserFromGroup APIs to ensure that the set of
