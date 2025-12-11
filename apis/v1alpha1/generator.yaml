@@ -65,15 +65,13 @@ resources:
           resource: Policy
           path: Status.ACKResourceMetadata.ARN
       # In order to support adding zero or more users to a group, we use
-      # custom update code path code that uses the AddUserToGroup and
-      # RemoveUserFromGroup API calls to manage the set of users in this Group.
+      # custom update code that calls the AddUserToGroup and RemoveUserFromGroup
+      # APIs to manage the set of users in this Group.
       Users:
         type: "[]*string"
         references:
           resource: User
           path: Spec.Name
-        compare:
-          is_ignored: true
       # These are policy documents that are added to the Group using the
       # Put/DeleteGroupPolicy APIs, as compared to the Attach/DetachGroupPolicy
       # APIs that are for non-inline managed policies.
