@@ -10,6 +10,12 @@
 			return nil, err
 		}
 	}
-	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.InlinePolicies", "Spec.PermissionsBoundary") {
+	if delta.DifferentAt("Spec.Users") {
+		err = rm.syncUsers(ctx, desired, latest)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.InlinePolicies", "Spec.Users", "Spec.PermissionsBoundary") {
 		return desired, nil
 	}

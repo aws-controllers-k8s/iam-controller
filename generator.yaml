@@ -64,6 +64,14 @@ resources:
         references:
           resource: Policy
           path: Status.ACKResourceMetadata.ARN
+      # In order to support adding zero or more users to a group, we use
+      # custom update code that calls the AddUserToGroup and RemoveUserFromGroup
+      # APIs to manage the set of users in this Group.
+      Users:
+        type: "[]*string"
+        references:
+          resource: User
+          path: Spec.Name
       # These are policy documents that are added to the Group using the
       # Put/DeleteGroupPolicy APIs, as compared to the Attach/DetachGroupPolicy
       # APIs that are for non-inline managed policies.
@@ -136,9 +144,9 @@ resources:
       sdk_delete_pre_build_request:
         template_path: hooks/policy/sdk_delete_pre_build_request.go.tpl
     update_operation:
-      # There is no `UpdatePolicy` API operation. The only way to update a 
+      # There is no `UpdatePolicy` API operation. The only way to update a
       # policy is to update the properties individually (only a few properties
-      # support this) or to delete the policy and recreate it entirely. 
+      # support this) or to delete the policy and recreate it entirely.
       #
       # This custom method will support updating the properties individually,
       # but there is currently no support for the delete/create option.

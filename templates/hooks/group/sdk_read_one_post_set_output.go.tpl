@@ -6,3 +6,7 @@
 	if err != nil {
 		return nil, err
 	}
+	ko.Spec.Users, err = rm.getUsers(ctx, &resource{ko})
+	if err != nil {
+		return nil, err
+	}

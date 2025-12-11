@@ -74,6 +74,16 @@ func newResourceDelta(
 	if !reflect.DeepEqual(a.ko.Spec.PolicyRefs, b.ko.Spec.PolicyRefs) {
 		delta.Add("Spec.PolicyRefs", a.ko.Spec.PolicyRefs, b.ko.Spec.PolicyRefs)
 	}
+	if !reflect.DeepEqual(a.ko.Spec.UserRefs, b.ko.Spec.UserRefs) {
+		delta.Add("Spec.UserRefs", a.ko.Spec.UserRefs, b.ko.Spec.UserRefs)
+	}
+	if len(a.ko.Spec.Users) != len(b.ko.Spec.Users) {
+		delta.Add("Spec.Users", a.ko.Spec.Users, b.ko.Spec.Users)
+	} else if len(a.ko.Spec.Users) > 0 {
+		if !ackcompare.SliceStringPEqual(a.ko.Spec.Users, b.ko.Spec.Users) {
+			delta.Add("Spec.Users", a.ko.Spec.Users, b.ko.Spec.Users)
+		}
+	}
 
 	return delta
 }

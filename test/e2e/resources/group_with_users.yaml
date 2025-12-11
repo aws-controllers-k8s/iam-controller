@@ -1,0 +1,8 @@
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: Group
+metadata:
+  name: $GROUP_NAME
+spec:
+  name: $GROUP_NAME
+  users:
+    - $USER_NAME
