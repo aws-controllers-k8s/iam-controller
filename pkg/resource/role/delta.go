@@ -17,16 +17,15 @@ package role
 
 import (
 	"bytes"
-	"reflect"
 
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	acktags "github.com/aws-controllers-k8s/runtime/pkg/tags"
+	"k8s.io/apimachinery/pkg/api/equality"
 )
 
 // Hack to avoid import errors during build...
 var (
 	_ = &bytes.Buffer{}
-	_ = &reflect.Method{}
 	_ = &acktags.Tags{}
 )
 
@@ -86,7 +85,7 @@ func newResourceDelta(
 			delta.Add("Spec.PermissionsBoundary", a.ko.Spec.PermissionsBoundary, b.ko.Spec.PermissionsBoundary)
 		}
 	}
-	if !reflect.DeepEqual(a.ko.Spec.PermissionsBoundaryRef, b.ko.Spec.PermissionsBoundaryRef) {
+	if !equality.Semantic.Equalities.DeepEqual(a.ko.Spec.PermissionsBoundaryRef, b.ko.Spec.PermissionsBoundaryRef) {
 		delta.Add("Spec.PermissionsBoundaryRef", a.ko.Spec.PermissionsBoundaryRef, b.ko.Spec.PermissionsBoundaryRef)
 	}
 	if len(a.ko.Spec.Policies) != len(b.ko.Spec.Policies) {
@@ -96,7 +95,7 @@ func newResourceDelta(
 			delta.Add("Spec.Policies", a.ko.Spec.Policies, b.ko.Spec.Policies)
 		}
 	}
-	if !reflect.DeepEqual(a.ko.Spec.PolicyRefs, b.ko.Spec.PolicyRefs) {
+	if !equality.Semantic.Equalities.DeepEqual(a.ko.Spec.PolicyRefs, b.ko.Spec.PolicyRefs) {
 		delta.Add("Spec.PolicyRefs", a.ko.Spec.PolicyRefs, b.ko.Spec.PolicyRefs)
 	}
 

@@ -17,16 +17,15 @@ package instance_profile
 
 import (
 	"bytes"
-	"reflect"
 
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	acktags "github.com/aws-controllers-k8s/runtime/pkg/tags"
+	"k8s.io/apimachinery/pkg/api/equality"
 )
 
 // Hack to avoid import errors during build...
 var (
 	_ = &bytes.Buffer{}
-	_ = &reflect.Method{}
 	_ = &acktags.Tags{}
 )
 
@@ -65,7 +64,7 @@ func newResourceDelta(
 			delta.Add("Spec.Role", a.ko.Spec.Role, b.ko.Spec.Role)
 		}
 	}
-	if !reflect.DeepEqual(a.ko.Spec.RoleRef, b.ko.Spec.RoleRef) {
+	if !equality.Semantic.Equalities.DeepEqual(a.ko.Spec.RoleRef, b.ko.Spec.RoleRef) {
 		delta.Add("Spec.RoleRef", a.ko.Spec.RoleRef, b.ko.Spec.RoleRef)
 	}
 	desiredACKTags, _ := convertToOrderedACKTags(a.ko.Spec.Tags)
