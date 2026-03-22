@@ -193,7 +193,10 @@ resources:
     fields:
       RoleName: 
         is_primary_key: true
-    manager: {}
+    manager:
+        delta:
+          key: "t.r.ko.Spec.PolicyARN"
+          value: "t.r.ko.Spec.PolicyARN"
   Role:
     hooks:
       delta_pre_compare:

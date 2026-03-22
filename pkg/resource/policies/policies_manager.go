@@ -28,14 +28,13 @@ type BasePoliciesManager interface {
 	toResource([]Policies) []*resource
 }
 
-// concretePoliciesManager is the concrete implementation of BasePoliciesManager.
-// It converts between resource objects and Policies sub-resource items by
-// extracting/populating the PolicyARN field.
-type concretePoliciesManager struct{}
+type PoliciesManager struct {
+	BasePoliciesManager
+	rm resourceManager
+}
 
-// toPoliciess converts a slice of resources into a slice of Policies items,
-// extracting the PolicyARN from each resource's spec.
-func (c *PoliciesManager) toPoliciess(resources []resource) []Policies {
+// toPoliciess converts a slice of resources into a slice of Policies items.
+func (m *PoliciesManager) toPoliciess(resources []resource) []Policies {
 	result := make([]Policies, 0, len(resources))
 	for _, r := range resources {
 		result = append(result, Policies{
@@ -45,20 +44,14 @@ func (c *PoliciesManager) toPoliciess(resources []resource) []Policies {
 	return result
 }
 
-// toResource converts a slice of Policies items back into resource pointers,
-// populating each resource's spec with the PolicyARN from the Policies item.
-func (c *PoliciesManager) toResource(items []Policies) []*resource {
+// toResource converts a slice of Policies items back into resource pointers.
+func (m *PoliciesManager) toResource(items []Policies) []*resource {
 	result := make([]*resource, 0, len(items))
 	for _, item := range items {
 		r := item.r
 		result = append(result, &r)
 	}
 	return result
-}
-
-type PoliciesManager struct {
-	BasePoliciesManager
-	rm resourceManager
 }
 
 // Sync reconciles the sub-resource collection by comparing the desired and
