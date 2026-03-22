@@ -22,6 +22,12 @@ operations:
     # Users field and we want to grab the Group information from the output
     # shape...
     output_wrapper_field_path: Group
+  AttachRolePolicy:
+    resource_name: Policies
+    operation_type: create
+  DetachRolePolicy:
+    resource_name: Policies
+    operation_type: delete
 resources:
   Group:
     hooks:
@@ -181,6 +187,13 @@ resources:
       Tags:
         compare:
           is_ignored: true
+  Policies:
+    tags:
+      ignore: true
+    fields:
+      RoleName: 
+        is_primary_key: true
+    manager: {}
   Role:
     hooks:
       delta_pre_compare:
@@ -212,6 +225,8 @@ resources:
           input_fields:
             RoleName: Name
     fields:
+      Name:
+        is_primary_key: true
       MaxSessionDuration:
         late_initialize: {}
       PermissionsBoundary:

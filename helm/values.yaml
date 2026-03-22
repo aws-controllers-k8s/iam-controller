@@ -153,6 +153,7 @@ reconcile:
     - Group
     - InstanceProfile
     - OpenIDConnectProvider
+    - Policies
     - Policy
     - Role
     - ServiceLinkedRole
