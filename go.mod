@@ -10,7 +10,6 @@ require (
 	github.com/aws/smithy-go v1.22.2
 	github.com/go-logr/logr v1.4.3
 	github.com/micahhausler/aws-iam-policy v0.4.4
-	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/samber/lo v1.37.0
 	github.com/spf13/pflag v1.0.9
 	k8s.io/api v0.35.0

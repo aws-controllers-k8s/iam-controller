@@ -376,6 +376,70 @@ class TestRole:
         condition.assert_synced(ref)
 
     
+    def test_managed_policies(self, simple_role):
+        """Validates the Policies sub-resource manager lifecycle: add, replace, remove."""
+        ref, _ = simple_role
+        role_name = ref.name
+
+        time.sleep(CHECK_STATUS_WAIT_SECONDS)
+        condition.assert_synced(ref)
+
+        # --- ADD: Attach two managed policies ---
+        policy_arns_v1 = [
+            "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
+            "arn:aws:iam::aws:policy/AmazonSQSReadOnlyAccess",
+        ]
+        updates = {
+            "spec": {"policies": policy_arns_v1},
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        condition.assert_synced(ref)
+
+        latest_policy_arns = role.get_attached_policy_arns(role_name)
+        assert set(latest_policy_arns) == set(policy_arns_v1)
+
+        # Verify the CR spec reflects the desired state
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert set(cr['spec']['policies']) == set(policy_arns_v1)
+
+        # --- REPLACE: Swap one policy for another ---
+        # Remove SQS, keep S3, add SNS — exercises both create and delete
+        # partitions in ComputeDelta
+        policy_arns_v2 = [
+            "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
+            "arn:aws:iam::aws:policy/AmazonSNSReadOnlyAccess",
+        ]
+        updates = {
+            "spec": {"policies": policy_arns_v2},
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        condition.assert_synced(ref)
+
+        latest_policy_arns = role.get_attached_policy_arns(role_name)
+        assert set(latest_policy_arns) == set(policy_arns_v2)
+
+        # --- REMOVE ALL: Clear all managed policies ---
+        updates = {
+            "spec": {"policies": []},
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        condition.assert_synced(ref)
+
+        latest_policy_arns = role.get_attached_policy_arns(role_name)
+        assert len(latest_policy_arns) == 0
+
+        # Verify CR spec is also empty
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert cr['spec'].get('policies', []) == [] or 'policies' not in cr['spec']
+
     def test_role_adopt(self, adopt_role):
         ref, cr = adopt_role
 

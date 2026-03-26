@@ -17,10 +17,18 @@ package policies
 
 import (
 	"context"
-	"fmt"
 
+	ackv1alpha1 "github.com/aws-controllers-k8s/runtime/apis/core/v1alpha1"
+	ackmetrics "github.com/aws-controllers-k8s/runtime/pkg/metrics"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
-	"github.com/mitchellh/hashstructure/v2"
+	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
+
+	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
+)
+
+// Hack to avoid import errors during build...
+var (
+	_ = &ackv1alpha1.AWSIdentifiers{}
 )
 
 type BasePoliciesManager interface {
@@ -86,7 +94,6 @@ func (m *PoliciesManager) Sync(
 				return err
 			}
 		}
-
 	}
 
 	// Update any sub-resource items that exist in both but have changed.
@@ -98,7 +105,6 @@ func (m *PoliciesManager) Sync(
 				return err
 			}
 		}
-
 	}
 
 	// Delete any sub-resource items that exist in latest but not in desired.
@@ -110,10 +116,88 @@ func (m *PoliciesManager) Sync(
 				return err
 			}
 		}
-
 	}
 
 	return nil
+}
+
+// Manager wraps the generated PoliciesManager and provides conversion
+// logic for transforming parent resource specs into sub-resource collections.
+type Manager struct {
+	pm *PoliciesManager
+}
+
+// NewManager creates a Manager using the provided SDK client and metrics
+// recorder.
+func NewManager(
+	sdkapi *svcsdk.Client,
+	metrics *ackmetrics.Metrics,
+) *Manager {
+	return &Manager{
+		pm: &PoliciesManager{
+			rm: resourceManager{
+				sdkapi:  sdkapi,
+				metrics: metrics,
+			},
+		},
+	}
+}
+
+// Sync converts the desired and latest parent specs into internal resource
+// slices using the configured conversion logic, then delegates to
+// PoliciesManager.Sync.
+func (m *Manager) Sync(
+	ctx context.Context,
+	desiredSpec any,
+	latestSpec any,
+) error {
+	desired := ConvertToResources(desiredSpec)
+	latest := ConvertToResources(latestSpec)
+	return m.pm.Sync(ctx, desired, latest)
+}
+
+// ConvertToResources converts a parent resource into a slice of internal resource
+// objects by type-switching on the top-level resource type to find the matching
+// source configuration, then iterating over the parent collection and applying
+// element and field mappings.
+func ConvertToResources(
+	spec any,
+) []resource {
+	if spec == nil {
+		return nil
+	}
+
+	switch v := spec.(type) {
+	case svcapitypes.Role:
+		return convertFromRole(v)
+	case *svcapitypes.Role:
+		if v == nil {
+			return nil
+		}
+		return convertFromRole(*v)
+	}
+	return nil
+}
+
+// convertFromRole handles conversion when the parent resource is Role.
+func convertFromRole(parent svcapitypes.Role) []resource {
+	collection := parent.Spec.Policies
+	if collection == nil {
+		return nil
+	}
+
+	var resources []resource
+
+	for _, elem := range collection {
+		ko := &svcapitypes.Policies{}
+		// Element mapping: PolicyARN ← element itself (scalar "." token)
+		ko.Spec.PolicyARN = elem
+		// Field mapping: RoleName ← parent.Spec.Name
+		ko.Spec.RoleName = parent.Spec.Name
+		resources = append(resources, resource{ko: ko})
+	}
+
+	return resources
 }
 
 // Delta holds the result of comparing desired vs. latest sub-resource items.
@@ -123,8 +207,8 @@ func (m *PoliciesManager) Sync(
 type Delta[T BaseSubResource] struct {
 	// toCreate contains items present in desired but absent from latest.
 	toCreate []T
-	// toUpdate contains items present in both but whose Hash() differs,
-	// indicating the item's state has changed.
+	// toUpdate contains items present in both but whose underlying resource
+	// differs (detected by newResourceDelta).
 	toUpdate []T
 	// toDelete contains items present in latest but absent from desired.
 	toDelete []T
@@ -132,28 +216,34 @@ type Delta[T BaseSubResource] struct {
 
 // ComputeDelta performs a key-based diff between the desired and latest
 // sub-resource slices. It uses Key() for identity (does this item exist?) and
-// Hash() for equality (has this item changed?). The resulting Delta tells the
-// SubResourceManager exactly which items need to be created, updated, or
-// deleted.
+// newResourceDelta for change detection (has this item changed?). The resulting
+// Delta tells the SubResourceManager exactly which items need to be created,
+// updated, or deleted.
 func ComputeDelta[T BaseSubResource](desired, latest []T) Delta[T] {
 	delta := Delta[T]{}
 	latestMap := make(map[string]T)
 	for _, l := range latest {
-		latestMap[Hash(l.Key())] = l
+		latestMap[l.Key()] = l
 	}
 
 	desiredMap := make(map[string]bool)
 	for _, d := range desired {
-		desiredMap[Hash(d.Key())] = true
-		if lat, exists := latestMap[Hash(d.Key())]; !exists {
+		key := d.Key()
+		desiredMap[key] = true
+		if lat, exists := latestMap[key]; !exists {
 			delta.toCreate = append(delta.toCreate, d)
-		} else if Hash(d.Value()) != Hash(lat.Value()) {
-			delta.toUpdate = append(delta.toUpdate, d)
+		} else {
+			dr := d.resource()
+			lr := lat.resource()
+			rdelta := newResourceDelta(&dr, &lr)
+			if len(rdelta.Differences) > 0 {
+				delta.toUpdate = append(delta.toUpdate, d)
+			}
 		}
 	}
 
-	for id, lat := range latestMap {
-		if !desiredMap[id] {
+	for key, lat := range latestMap {
+		if !desiredMap[key] {
 			delta.toDelete = append(delta.toDelete, lat)
 		}
 	}
@@ -165,37 +255,21 @@ func ComputeDelta[T BaseSubResource](desired, latest []T) Delta[T] {
 // collection.
 type BaseSubResource interface {
 	// Key returns the unique identifier for this item within the collection.
-	Key() any
-	// Value returns the meaningful content of this item.
-	Value() any
-}
-
-// SubResource provides a default Hash implementation for any BaseSubResource
-// using structural hashing. Concrete sub-resource types can embed this to get
-// automatic hash computation based on their Value().
-type SubResource struct {
-	BaseSubResource
+	Key() string
+	// resource returns the underlying resource for delta comparison.
+	resource() resource
 }
 
 type Policies struct {
-	*SubResource
 	r resource
 }
 
-// Key returns the policies key as the unique identifier.
-func (t Policies) Key() any {
-	return t.r.ko.Spec.PolicyARN
+// Key returns the primary key value as a string identifier for this sub-resource.
+func (t Policies) Key() string {
+	return *t.r.ko.Spec.PolicyARN
 }
 
-// Value returns the policies value.
-func (t Policies) Value() any {
-	return t.r.ko.Spec.PolicyARN
-}
-
-func Hash(value any) string {
-	hash, err := hashstructure.Hash(value, hashstructure.FormatV2, nil)
-	if err != nil {
-		return ""
-	}
-	return fmt.Sprintf("%d", hash)
+// resource returns the underlying resource for delta comparison.
+func (t Policies) resource() resource {
+	return t.r
 }

@@ -194,9 +194,14 @@ resources:
       RoleName: 
         is_primary_key: true
     manager:
-        delta:
-          key: "t.r.ko.Spec.PolicyARN"
-          value: "t.r.ko.Spec.PolicyARN"
+        primary_key: "Spec.PolicyARN"
+        conversion:
+          Role:
+            source_field_path: "Spec.Policies"
+            element:
+              PolicyARN: "."
+            fields:
+              RoleName: "Spec.Name"
   Role:
     hooks:
       delta_pre_compare:
