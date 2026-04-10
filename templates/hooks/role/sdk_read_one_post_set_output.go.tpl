@@ -2,18 +2,19 @@
 		if doc, err := decodeDocument(*ko.Spec.AssumeRolePolicyDocument); err != nil {
 			return nil, err
 		} else {
-			ko.Spec.AssumeRolePolicyDocument = &doc
+			// Normalize the JSON through the IAM policy library so that
+			// single-element arrays (e.g. "Service": "ec2.amazonaws.com")
+			// are expanded back to arrays, matching the user-provided format.
+			var p awsiampolicy.Policy
+			if err := json.Unmarshal([]byte(doc), &p); err == nil {
+				if normalized, err := json.Marshal(p); err == nil {
+					s := string(normalized)
+					ko.Spec.AssumeRolePolicyDocument = &s
+				} else {
+					ko.Spec.AssumeRolePolicyDocument = &doc
+				}
+			} else {
+				ko.Spec.AssumeRolePolicyDocument = &doc
+			}
 		}
-	}
-	ko.Spec.Policies, err = rm.getManagedPolicies(ctx, &resource{ko})
-	if err != nil {
-		return nil, err
-	}
-	ko.Spec.InlinePolicies, err = rm.getInlinePolicies(ctx, &resource{ko})
-	if err != nil {
-		return nil, err
-	}
-	ko.Spec.Tags, err = rm.getTags(ctx, &resource{ko})
-	if err != nil {
-		return nil, err
 	}

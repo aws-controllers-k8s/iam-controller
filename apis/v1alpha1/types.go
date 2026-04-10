@@ -157,11 +157,12 @@ type GroupDetail struct {
 	//
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the Amazon Web Services General Reference.
-	ARN        *string      `json:"arn,omitempty"`
-	CreateDate *metav1.Time `json:"createDate,omitempty"`
-	GroupID    *string      `json:"groupID,omitempty"`
-	GroupName  *string      `json:"groupName,omitempty"`
-	Path       *string      `json:"path,omitempty"`
+	ARN                     *string           `json:"arn,omitempty"`
+	AttachedManagedPolicies []*AttachedPolicy `json:"attachedManagedPolicies,omitempty"`
+	CreateDate              *metav1.Time      `json:"createDate,omitempty"`
+	GroupID                 *string           `json:"groupID,omitempty"`
+	GroupName               *string           `json:"groupName,omitempty"`
+	Path                    *string           `json:"path,omitempty"`
 }
 
 // Contains information about an IAM group entity.
@@ -410,9 +411,10 @@ type RoleDetail struct {
 	//
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the Amazon Web Services General Reference.
-	ARN                      *string      `json:"arn,omitempty"`
-	AssumeRolePolicyDocument *string      `json:"assumeRolePolicyDocument,omitempty"`
-	CreateDate               *metav1.Time `json:"createDate,omitempty"`
+	ARN                      *string           `json:"arn,omitempty"`
+	AssumeRolePolicyDocument *string           `json:"assumeRolePolicyDocument,omitempty"`
+	AttachedManagedPolicies  []*AttachedPolicy `json:"attachedManagedPolicies,omitempty"`
+	CreateDate               *metav1.Time      `json:"createDate,omitempty"`
 	// Contains a list of instance profiles.
 	InstanceProfileList []*InstanceProfile_SDK `json:"instanceProfileList,omitempty"`
 	Path                *string                `json:"path,omitempty"`
@@ -623,9 +625,10 @@ type UserDetail struct {
 	//
 	// For more information about ARNs, go to Amazon Resource Names (ARNs) (https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html)
 	// in the Amazon Web Services General Reference.
-	ARN        *string      `json:"arn,omitempty"`
-	CreateDate *metav1.Time `json:"createDate,omitempty"`
-	Path       *string      `json:"path,omitempty"`
+	ARN                     *string           `json:"arn,omitempty"`
+	AttachedManagedPolicies []*AttachedPolicy `json:"attachedManagedPolicies,omitempty"`
+	CreateDate              *metav1.Time      `json:"createDate,omitempty"`
+	Path                    *string           `json:"path,omitempty"`
 	// Contains information about an attached permissions boundary.
 	//
 	// An attached permissions boundary is a managed policy that has been attached

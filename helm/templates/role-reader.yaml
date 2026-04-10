@@ -20,7 +20,6 @@ rules:
   - instanceprofiles
   - openidconnectproviders
   - policies
-  - policies
   - roles
   - servicelinkedroles
   - users

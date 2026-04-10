@@ -128,6 +128,7 @@ func (rm *resourceManager) sdkFind(
 	} else {
 		ko.Spec.Tags = tags
 	}
+
 	return &resource{ko}, nil
 }
 
@@ -267,6 +268,7 @@ func (rm *resourceManager) sdkDelete(
 	defer func() {
 		exit(err)
 	}()
+
 	input, err := rm.newDeleteRequestPayload(r)
 	if err != nil {
 		return nil, err

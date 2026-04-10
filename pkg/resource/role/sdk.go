@@ -17,6 +17,7 @@ package role
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -33,10 +34,16 @@ import (
 	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
 	svcsdktypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	smithy "github.com/aws/smithy-go"
+	awsiampolicy "github.com/micahhausler/aws-iam-policy/policy"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
+	role_assume_role_policy_document "github.com/aws-controllers-k8s/iam-controller/pkg/resource/role/role_assume_role_policy_document"
+	role_inline_policies "github.com/aws-controllers-k8s/iam-controller/pkg/resource/role/role_inline_policies"
+	role_permissions_boundary "github.com/aws-controllers-k8s/iam-controller/pkg/resource/role/role_permissions_boundary"
+	role_policies "github.com/aws-controllers-k8s/iam-controller/pkg/resource/role/role_policies"
+	role_tags "github.com/aws-controllers-k8s/iam-controller/pkg/resource/role/role_tags"
 )
 
 // Hack to avoid import errors during build...
@@ -51,6 +58,11 @@ var (
 	_ = &reflect.Value{}
 	_ = fmt.Sprintf("")
 	_ = &ackrequeue.NoRequeue{}
+	_ = role_permissions_boundary.NewManager
+	_ = role_policies.NewManager
+	_ = role_tags.NewManager
+	_ = role_assume_role_policy_document.NewManager
+	_ = role_inline_policies.NewManager
 	_ = &aws.Config{}
 )
 
@@ -173,22 +185,43 @@ func (rm *resourceManager) sdkFind(
 		if doc, err := decodeDocument(*ko.Spec.AssumeRolePolicyDocument); err != nil {
 			return nil, err
 		} else {
-			ko.Spec.AssumeRolePolicyDocument = &doc
+			// Normalize the JSON through the IAM policy library so that
+			// single-element arrays (e.g. "Service": "ec2.amazonaws.com")
+			// are expanded back to arrays, matching the user-provided format.
+			var p awsiampolicy.Policy
+			if err := json.Unmarshal([]byte(doc), &p); err == nil {
+				if normalized, err := json.Marshal(p); err == nil {
+					s := string(normalized)
+					ko.Spec.AssumeRolePolicyDocument = &s
+				} else {
+					ko.Spec.AssumeRolePolicyDocument = &doc
+				}
+			} else {
+				ko.Spec.AssumeRolePolicyDocument = &doc
+			}
 		}
 	}
-	ko.Spec.Policies, err = rm.getManagedPolicies(ctx, &resource{ko})
-	if err != nil {
-		return nil, err
-	}
-	ko.Spec.InlinePolicies, err = rm.getInlinePolicies(ctx, &resource{ko})
-	if err != nil {
-		return nil, err
-	}
-	ko.Spec.Tags, err = rm.getTags(ctx, &resource{ko})
-	if err != nil {
-		return nil, err
-	}
 
+	mgr_role_tags := role_tags.NewManager(rm.sdkapi, rm.metrics)
+	if err := mgr_role_tags.Get(ctx, ko); err != nil {
+		return nil, err
+	}
+	mgr_role_assume_role_policy_document := role_assume_role_policy_document.NewManager(rm.sdkapi, rm.metrics)
+	if err := mgr_role_assume_role_policy_document.Get(ctx, ko); err != nil {
+		return nil, err
+	}
+	mgr_role_inline_policies := role_inline_policies.NewManager(rm.sdkapi, rm.metrics)
+	if err := mgr_role_inline_policies.Get(ctx, ko); err != nil {
+		return nil, err
+	}
+	mgr_role_permissions_boundary := role_permissions_boundary.NewManager(rm.sdkapi, rm.metrics)
+	if err := mgr_role_permissions_boundary.Get(ctx, ko); err != nil {
+		return nil, err
+	}
+	mgr_role_policies := role_policies.NewManager(rm.sdkapi, rm.metrics)
+	if err := mgr_role_policies.Get(ctx, ko); err != nil {
+		return nil, err
+	}
 	return &resource{ko}, nil
 }
 
@@ -391,40 +424,41 @@ func (rm *resourceManager) sdkUpdate(
 	defer func() {
 		exit(err)
 	}()
-	if delta.DifferentAt("Spec.Policies") {
-		err = rm.syncManagedPolicies(ctx, desired, latest)
-		if err != nil {
-			return nil, err
-		}
-	}
+
+	// Sync sub-resource managers for fields managed by separate API operations.
 	if delta.DifferentAt("Spec.InlinePolicies") {
-		err = rm.syncInlinePolicies(ctx, desired, latest)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if delta.DifferentAt("Spec.Tags") {
-		err = rm.syncTags(ctx, desired, latest)
-		if err != nil {
+		mgr_role_inline_policies := role_inline_policies.NewManager(rm.sdkapi, rm.metrics)
+		if err = mgr_role_inline_policies.Sync(ctx, desired.ko, latest.ko); err != nil {
 			return nil, err
 		}
 	}
 	if delta.DifferentAt("Spec.PermissionsBoundary") {
-		err = rm.syncRolePermissionsBoundary(ctx, desired)
-		if err != nil {
+		mgr_role_permissions_boundary := role_permissions_boundary.NewManager(rm.sdkapi, rm.metrics)
+		if err = mgr_role_permissions_boundary.Sync(ctx, desired.ko, latest.ko); err != nil {
+			return nil, err
+		}
+	}
+	if delta.DifferentAt("Spec.Policies") {
+		mgr_role_policies := role_policies.NewManager(rm.sdkapi, rm.metrics)
+		if err = mgr_role_policies.Sync(ctx, desired.ko, latest.ko); err != nil {
+			return nil, err
+		}
+	}
+	if delta.DifferentAt("Spec.Tags") {
+		mgr_role_tags := role_tags.NewManager(rm.sdkapi, rm.metrics)
+		if err = mgr_role_tags.Sync(ctx, desired.ko, latest.ko); err != nil {
 			return nil, err
 		}
 	}
 	if delta.DifferentAt("Spec.AssumeRolePolicyDocument") {
-		err = rm.putAssumeRolePolicy(ctx, desired)
-		if err != nil {
+		mgr_role_assume_role_policy_document := role_assume_role_policy_document.NewManager(rm.sdkapi, rm.metrics)
+		if err = mgr_role_assume_role_policy_document.Sync(ctx, desired.ko, latest.ko); err != nil {
 			return nil, err
 		}
 	}
-	if !delta.DifferentExcept("Spec.Tags", "Spec.Policies", "Spec.InlinePolicies", "Spec.PermissionsBoundary", "Spec.AssumeRolePolicyDocument") {
+	if !delta.DifferentExcept("Spec.InlinePolicies", "Spec.PermissionsBoundary", "Spec.Policies", "Spec.Tags", "Spec.AssumeRolePolicyDocument") {
 		return desired, nil
 	}
-
 	input, err := rm.newUpdateRequestPayload(ctx, desired, delta)
 	if err != nil {
 		return nil, err
@@ -482,17 +516,36 @@ func (rm *resourceManager) sdkDelete(
 	defer func() {
 		exit(err)
 	}()
-	// This deletes all associated managed and inline policies from the role
-	roleCpy := r.ko.DeepCopy()
-	roleCpy.Spec.Policies = nil
-	if err := rm.syncManagedPolicies(ctx, &resource{ko: roleCpy}, r); err != nil {
-		return nil, err
-	}
-	roleCpy.Spec.InlinePolicies = map[string]*string{}
-	if err := rm.syncInlinePolicies(ctx, &resource{ko: roleCpy}, r); err != nil {
-		return nil, err
-	}
 
+	// Clean up sub-resources before deleting the parent resource.
+	// For each sub-resource, sync with a nil/empty desired state so all
+	// items are deleted.
+	koCopy := r.ko.DeepCopy()
+	koCopy.Spec.Tags = nil
+	koCopy.Spec.AssumeRolePolicyDocument = nil
+	koCopy.Spec.InlinePolicies = nil
+	koCopy.Spec.PermissionsBoundary = nil
+	koCopy.Spec.Policies = nil
+	mgr_role_tags := role_tags.NewManager(rm.sdkapi, rm.metrics)
+	if err = mgr_role_tags.Sync(ctx, koCopy, r.ko); err != nil {
+		return nil, err
+	}
+	mgr_role_assume_role_policy_document := role_assume_role_policy_document.NewManager(rm.sdkapi, rm.metrics)
+	if err = mgr_role_assume_role_policy_document.Sync(ctx, koCopy, r.ko); err != nil {
+		return nil, err
+	}
+	mgr_role_inline_policies := role_inline_policies.NewManager(rm.sdkapi, rm.metrics)
+	if err = mgr_role_inline_policies.Sync(ctx, koCopy, r.ko); err != nil {
+		return nil, err
+	}
+	mgr_role_permissions_boundary := role_permissions_boundary.NewManager(rm.sdkapi, rm.metrics)
+	if err = mgr_role_permissions_boundary.Sync(ctx, koCopy, r.ko); err != nil {
+		return nil, err
+	}
+	mgr_role_policies := role_policies.NewManager(rm.sdkapi, rm.metrics)
+	if err = mgr_role_policies.Sync(ctx, koCopy, r.ko); err != nil {
+		return nil, err
+	}
 	input, err := rm.newDeleteRequestPayload(r)
 	if err != nil {
 		return nil, err

@@ -22,12 +22,42 @@ operations:
     # Users field and we want to grab the Group information from the output
     # shape...
     output_wrapper_field_path: Group
+  PutRolePermissionsBoundary:
+    resource_name: PermissionsBoundary
+    operation_type: create
+  DeleteRolePermissionsBoundary:
+    resource_name: PermissionsBoundary
+    operation_type: delete
   AttachRolePolicy:
     resource_name: Policies
     operation_type: create
   DetachRolePolicy:
     resource_name: Policies
     operation_type: delete
+  ListAttachedRolePolicies:
+    resource_name: Policies
+    operation_type: list
+  PutRolePolicy:
+    resource_name: InlinePolicies
+    operation_type: create
+  DeleteRolePolicy:
+    resource_name: InlinePolicies
+    operation_type: delete
+  ListRolePolicies:
+    resource_name: InlinePolicies
+    operation_type: list
+  TagRole:
+    resource_name: Tags
+    operation_type: create
+  UntagRole:
+    resource_name: Tags
+    operation_type: delete
+  ListRoleTags:
+    resource_name: Tags
+    operation_type: list
+  UpdateAssumeRolePolicy:
+    resource_name: AssumeRolePolicyDocument
+    operation_type: create
 resources:
   Group:
     hooks:
@@ -187,22 +217,90 @@ resources:
       Tags:
         compare:
           is_ignored: true
-  Policies:
-    tags:
-      ignore: true
-    fields:
-      RoleName: 
-        is_primary_key: true
-    manager:
-        primary_key: "Spec.PolicyARN"
-        conversion:
-          Role:
-            source_field_path: "Spec.Policies"
-            element:
-              PolicyARN: "."
-            fields:
-              RoleName: "Spec.Name"
   Role:
+    sub_resources:
+      Policies:
+        fields:
+          RoleName:
+            is_primary_key: true
+          PolicyARNs:
+            type: "[]*string"
+        hooks:
+          sdk_read_many_post_set_output:
+            template_path: hooks/role_policies/sdk_read_many_post_set_output.go.tpl
+        manager:
+          read_field_path: "Spec.PolicyARNs"
+          mapper:
+            - from: "$item"
+              to: "Spec.PolicyARN"
+            - from: "Spec.Name"
+              to: "Spec.RoleName"
+      InlinePolicies:
+        fields:
+          RoleName:
+            is_primary_key: true
+          InlinePolicyMap:
+            type: map[string]*string
+        hooks:
+          sdk_read_many_post_set_output:
+            template_path: hooks/role_inline_policies/sdk_read_many_post_set_output.go.tpl
+        manager:
+          read_field_path: "Spec.InlinePolicyMap"
+          mapper:
+            - from: "$key"
+              to: "Spec.PolicyName"
+            - from: "$value"
+              to: "Spec.PolicyDocument"
+            - from: "Spec.Name"
+              to: "Spec.RoleName"
+      Tags:
+        fields:
+          RoleName:
+            is_primary_key: true
+          Key:
+            type: "*string"
+          TagKeys:
+            type: "[]*string"
+        hooks:
+          sdk_read_many_post_set_output:
+            template_path: hooks/role_tags/sdk_read_many_post_set_output.go.tpl
+          sdk_delete_pre_build_request:
+            template_path: hooks/role_tags/sdk_delete_pre_build_request.go.tpl
+        manager:
+          read_field_path: "Spec.Tags"
+          mapper:
+            - from: "$item"
+              to: "Spec.Tags"
+            - from: "$item.Key"
+              to: "Spec.Key"
+            - from: "Spec.Name"
+              to: "Spec.RoleName"
+      PermissionsBoundary:
+        fields:
+          RoleName:
+            is_primary_key: true
+        find_operation:
+          custom_method_name: customFindPermissionsBoundary
+        manager:
+          read_field_path: "Spec.PermissionsBoundary"
+          mapper:
+            - from: "Spec.PermissionsBoundary"
+              to: "Spec.PermissionsBoundary"
+            - from: "Spec.Name"
+              to: "Spec.RoleName"
+      AssumeRolePolicyDocument:
+        fields:
+          RoleName:
+            is_primary_key: true
+        find_operation:
+          custom_method_name: customFindAssumeRolePolicyDocument
+        manager:
+          read_field_path: "Spec.PolicyDocument"
+          mapper:
+            - from: "Spec.AssumeRolePolicyDocument"
+              to: "Spec.PolicyDocument"
+            - from: "Spec.Name"
+              to: "Spec.RoleName"
     hooks:
       delta_pre_compare:
         code: customPreCompare(delta, a, b)
@@ -210,10 +308,6 @@ resources:
         template_path: hooks/role/sdk_read_one_post_set_output.go.tpl
       sdk_create_post_set_output:
         template_path: hooks/role/sdk_create_post_set_output.go.tpl
-      sdk_update_pre_build_request:
-        template_path: hooks/role/sdk_update_pre_build_request.go.tpl
-      sdk_delete_pre_build_request:
-        template_path: hooks/role/sdk_delete_pre_build_request.go.tpl
     exceptions:
       terminal_codes:
         - InvalidInput
