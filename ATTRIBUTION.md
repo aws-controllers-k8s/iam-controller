@@ -26,9 +26,9 @@ License version 2.0, we include the full text of the package's License below.
 * `github.com/aws/aws-sdk-go-v2/service/iam`
 * `github.com/aws/smithy-go`
 * `github.com/go-logr/logr`
-* `github.com/micahhausler/aws-iam-policy`
 * `github.com/samber/lo`
 * `github.com/spf13/pflag`
+* `github.com/stretchr/testify`
 * `k8s.io/api`
 * `k8s.io/apimachinery`
 * `k8s.io/client-go`
@@ -1566,8 +1566,6 @@ Subdependencies:
 
 
 
-
-
 ### github.com/samber/lo
 
 License Identifier: MIT
@@ -1629,6 +1627,8 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
 THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 
 
 
