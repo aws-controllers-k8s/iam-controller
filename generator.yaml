@@ -247,8 +247,7 @@ resources:
       InlinePolicies:
         type: map[string]*string
       AssumeRolePolicyDocument:
-        compare:
-          is_ignored: true
+        is_iam_policy: true
       Tags:
         compare:
           is_ignored: true
