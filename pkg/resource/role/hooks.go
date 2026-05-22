@@ -535,6 +535,45 @@ func (rm *resourceManager) removeTags(
 	return err
 }
 
+// removeFromInstanceProfiles lists all instance profiles that the role is
+// attached to and removes the role from each of them. This is required before
+// deleting a role, because IAM will reject a DeleteRole call if the role is
+// still attached to any instance profiles (e.g. those created by EKS Auto Mode).
+func (rm *resourceManager) removeFromInstanceProfiles(
+	ctx context.Context,
+	r *resource,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.removeFromInstanceProfiles")
+	defer func() { exit(err) }()
+
+	roleName := r.ko.Spec.Name
+	input := &svcsdk.ListInstanceProfilesForRoleInput{
+		RoleName: roleName,
+	}
+
+	paginator := svcsdk.NewListInstanceProfilesForRolePaginator(rm.sdkapi, input)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		rm.metrics.RecordAPICall("READ_MANY", "ListInstanceProfilesForRole", err)
+		if err != nil {
+			return err
+		}
+		for _, ip := range page.InstanceProfiles {
+			removeInput := &svcsdk.RemoveRoleFromInstanceProfileInput{
+				InstanceProfileName: ip.InstanceProfileName,
+				RoleName:            roleName,
+			}
+			_, err = rm.sdkapi.RemoveRoleFromInstanceProfile(ctx, removeInput)
+			rm.metrics.RecordAPICall("UPDATE", "RemoveRoleFromInstanceProfile", err)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func decodeDocument(encoded string) (string, error) {
 	return url.QueryUnescape(encoded)
 }

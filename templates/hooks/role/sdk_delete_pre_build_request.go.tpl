@@ -8,3 +8,9 @@
 	if err := rm.syncInlinePolicies(ctx, &resource{ko: roleCpy}, r); err != nil {
 		return nil, err
 	}
+	// Remove the role from all instance profiles it is attached to.
+	// This handles cases where external systems (e.g. EKS Auto Mode) have
+	// attached the role to instance profiles not managed by ACK.
+	if err := rm.removeFromInstanceProfiles(ctx, r); err != nil {
+		return nil, err
+	}

@@ -162,3 +162,17 @@ def get_assume_role_policy(role_name):
     except c.exceptions.NoSuchEntityException:
         return None
 
+
+def get_instance_profiles(role_name):
+    """Returns a list of instance profile names that the supplied Role is
+    attached to.
+
+    If no such Role exists, returns None.
+    """
+    c = boto3.client('iam')
+    try:
+        resp = c.list_instance_profiles_for_role(RoleName=role_name)
+        return [ip['InstanceProfileName'] for ip in resp['InstanceProfiles']]
+    except c.exceptions.NoSuchEntityException:
+        return None
+

@@ -17,6 +17,7 @@ import logging
 import json
 import time
 
+import boto3
 import pytest
 
 from acktest.k8s import condition
@@ -388,3 +389,89 @@ class TestRole:
 
         user_policies = get_bootstrap_resources().AdoptedRole.managed_policies
         assert set(cr['spec']['policies']) == set(user_policies) 
+
+
+@service_marker
+class TestRoleDeleteWithInstanceProfile:
+    """Tests that a Role can be deleted even when it is attached to an
+    instance profile not managed by ACK (e.g. created by EKS Auto Mode).
+    """
+
+    def test_delete_role_attached_to_external_instance_profile(self):
+        """Create a Role CR, externally attach it to an instance profile via
+        boto3 (simulating EKS Auto Mode), then delete the Role CR and verify
+        deletion succeeds without DeleteConflict error.
+        """
+        iam_client = boto3.client('iam')
+        role_name = random_suffix_name("role-ip-detach", 24)
+        instance_profile_name = random_suffix_name("ext-ip-test", 24)
+
+        # Create the Role CR via K8s
+        replacements = REPLACEMENT_VALUES.copy()
+        replacements['ROLE_NAME'] = role_name
+        replacements['ROLE_DESCRIPTION'] = "role for instance profile detach test"
+        replacements['MAX_SESSION_DURATION'] = str(MAX_SESS_DURATION)
+
+        resource_data = load_resource(
+            "role_simple",
+            additional_replacements=replacements,
+        )
+
+        ref = k8s.CustomResourceReference(
+            CRD_GROUP, CRD_VERSION, ROLE_RESOURCE_PLURAL,
+            role_name, namespace="default",
+        )
+        k8s.create_custom_resource(ref, resource_data)
+        cr = k8s.wait_resource_consumed_by_controller(ref)
+        assert cr is not None
+
+        role.wait_until_exists(role_name)
+
+        # Externally create an instance profile and attach the role (simulates
+        # what EKS Auto Mode does when nodes launch)
+        try:
+            iam_client.create_instance_profile(
+                InstanceProfileName=instance_profile_name,
+            )
+            iam_client.add_role_to_instance_profile(
+                InstanceProfileName=instance_profile_name,
+                RoleName=role_name,
+            )
+
+            # Verify the role is attached
+            resp = iam_client.list_instance_profiles_for_role(RoleName=role_name)
+            assert len(resp['InstanceProfiles']) == 1
+            assert resp['InstanceProfiles'][0]['InstanceProfileName'] == instance_profile_name
+
+            # Delete the Role CR — this should succeed because the controller
+            # detaches the role from all instance profiles before calling DeleteRole
+            _, deleted = k8s.delete_custom_resource(
+                ref,
+                period_length=DELETE_WAIT_AFTER_SECONDS,
+            )
+            assert deleted
+
+            role.wait_until_deleted(role_name)
+
+            # Verify the instance profile still exists but role is detached
+            resp = iam_client.get_instance_profile(
+                InstanceProfileName=instance_profile_name,
+            )
+            assert len(resp['InstanceProfile']['Roles']) == 0
+
+        finally:
+            # Cleanup: delete the externally-created instance profile
+            try:
+                # Remove role from instance profile if still attached (in case test failed)
+                iam_client.remove_role_from_instance_profile(
+                    InstanceProfileName=instance_profile_name,
+                    RoleName=role_name,
+                )
+            except iam_client.exceptions.NoSuchEntityException:
+                pass
+            try:
+                iam_client.delete_instance_profile(
+                    InstanceProfileName=instance_profile_name,
+                )
+            except iam_client.exceptions.NoSuchEntityException:
+                pass
