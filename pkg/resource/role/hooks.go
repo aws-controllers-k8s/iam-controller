@@ -15,6 +15,7 @@ package role
 
 import (
 	"context"
+	"errors"
 	"net/url"
 
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
@@ -22,6 +23,7 @@ import (
 	ackutil "github.com/aws-controllers-k8s/runtime/pkg/util"
 	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
 	svcsdktypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/samber/lo"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
@@ -533,6 +535,70 @@ func (rm *resourceManager) removeTags(
 	_, err = rm.sdkapi.UntagRole(ctx, input)
 	rm.metrics.RecordAPICall("UPDATE", "UntagRole", err)
 	return err
+}
+
+// removeFromInstanceProfiles lists all instance profiles that the role is
+// attached to and removes the role from each of them. This is required before
+// deleting a role, because IAM will reject a DeleteRole call if the role is
+// still attached to any instance profiles (e.g. those created by EKS Auto Mode).
+//
+// NoSuchEntity errors are ignored on both API calls because:
+//   - ListInstanceProfilesForRole may return NoSuchEntity if the role was already
+//     deleted from AWS (e.g. by another controller or manual cleanup).
+//   - RemoveRoleFromInstanceProfile may return NoSuchEntity if the instance
+//     profile was deleted between the list and remove calls (race with EKS
+//     cleaning up its own instance profiles).
+//
+// In both cases the pre-condition for role deletion is already satisfied.
+func (rm *resourceManager) removeFromInstanceProfiles(
+	ctx context.Context,
+	r *resource,
+) (err error) {
+	rlog := ackrtlog.FromContext(ctx)
+	exit := rlog.Trace("rm.removeFromInstanceProfiles")
+	defer func() { exit(err) }()
+
+	roleName := r.ko.Spec.Name
+	input := &svcsdk.ListInstanceProfilesForRoleInput{
+		RoleName: roleName,
+	}
+
+	paginator := svcsdk.NewListInstanceProfilesForRolePaginator(rm.sdkapi, input)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		rm.metrics.RecordAPICall("READ_MANY", "ListInstanceProfilesForRole", err)
+		if err != nil {
+			// Role no longer exists in IAM — nothing to detach.
+			if isNoSuchEntityError(err) {
+				return nil
+			}
+			return err
+		}
+		for _, ip := range page.InstanceProfiles {
+			removeInput := &svcsdk.RemoveRoleFromInstanceProfileInput{
+				InstanceProfileName: ip.InstanceProfileName,
+				RoleName:            roleName,
+			}
+			_, err = rm.sdkapi.RemoveRoleFromInstanceProfile(ctx, removeInput)
+			rm.metrics.RecordAPICall("UPDATE", "RemoveRoleFromInstanceProfile", err)
+			if err != nil {
+				// Instance profile was already deleted or role already
+				// detached — safe to continue.
+				if isNoSuchEntityError(err) {
+					continue
+				}
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// isNoSuchEntityError returns true if the error is an IAM NoSuchEntity error,
+// meaning the referenced resource (role or instance profile) does not exist.
+func isNoSuchEntityError(err error) bool {
+	var apiErr smithy.APIError
+	return errors.As(err, &apiErr) && apiErr.ErrorCode() == "NoSuchEntity"
 }
 
 func decodeDocument(encoded string) (string, error) {
