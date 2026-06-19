@@ -1,0 +1,12 @@
+# Example 2: RolePolicyAttachment using direct ARN/name references
+# Use this when Role and Policy already exist in AWS and are not managed by ACK.
+
+---
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: RolePolicyAttachment
+metadata:
+  name: attach-existing-lambda-execution
+spec:
+  # Direct reference to existing AWS resources
+  roleName: lambda-execution-role
+  policyARN: arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole

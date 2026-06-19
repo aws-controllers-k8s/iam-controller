@@ -76,6 +76,7 @@ rules:
   - instanceprofiles
   - openidconnectproviders
   - policies
+  - rolepolicyattachments
   - roles
   - servicelinkedroles
   - users
@@ -94,6 +95,7 @@ rules:
   - instanceprofiles/status
   - openidconnectproviders/status
   - policies/status
+  - rolepolicyattachments/status
   - roles/status
   - servicelinkedroles/status
   - users/status
