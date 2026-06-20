@@ -1,0 +1,11 @@
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: RolePolicyAttachment
+metadata:
+  name: $ATTACHMENT_NAME
+spec:
+  roleRef:
+    from:
+      name: $ROLE_CR_NAME
+  policyRef:
+    from:
+      name: $POLICY_CR_NAME
