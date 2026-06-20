@@ -66,7 +66,7 @@ func newResourceDelta(
 	if ackcompare.HasNilDifference(a.ko.Spec.PolicyDocument, b.ko.Spec.PolicyDocument) {
 		delta.Add("Spec.PolicyDocument", a.ko.Spec.PolicyDocument, b.ko.Spec.PolicyDocument)
 	} else if a.ko.Spec.PolicyDocument != nil && b.ko.Spec.PolicyDocument != nil {
-		if *a.ko.Spec.PolicyDocument != *b.ko.Spec.PolicyDocument {
+		if equal, err := ackcompare.IAMPolicyDocumentEqual(*a.ko.Spec.PolicyDocument, *b.ko.Spec.PolicyDocument); err != nil || !equal {
 			delta.Add("Spec.PolicyDocument", a.ko.Spec.PolicyDocument, b.ko.Spec.PolicyDocument)
 		}
 	}

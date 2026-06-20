@@ -178,6 +178,8 @@ resources:
           method: Create
       Path:
         late_initialize: {}
+      PolicyDocument:
+        is_iam_policy: true
       Tags:
         compare:
           is_ignored: true
