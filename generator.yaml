@@ -235,11 +235,17 @@ resources:
       # In order to support attaching zero or more policies to a role, we use
       # custom update code path code that uses the Attach/DetachRolePolicy API
       # calls to manage the set of PolicyARNs attached to this Role.
+      #
+      # Comparison is delegated to comparePolicies() in customPreCompare so that
+      # it can honor the additive policy-reconciliation mode annotation, where
+      # managed policies attached out-of-band are never treated as drift.
       Policies:
         type: "[]*string"
         references:
           resource: Policy
           path: Status.ACKResourceMetadata.ARN
+        compare:
+          is_ignored: true
       # These are policy documents that are added to the Role using the
       # Put/DeleteRolePolicy APIs, as compared to the Attach/DetachRolePolicy
       # APIs that are for non-inline managed policies.

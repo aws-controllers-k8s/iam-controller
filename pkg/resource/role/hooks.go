@@ -16,6 +16,7 @@ package role
 import (
 	"context"
 	"net/url"
+	"strings"
 
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
@@ -93,6 +94,7 @@ func (rm *resourceManager) syncManagedPolicies(
 	toDelete := []*string{}
 
 	existingPolicies := latest.ko.Spec.Policies
+	additive := isAdditivePolicyMode(desired)
 
 	for _, p := range desired.ko.Spec.Policies {
 		if !ackutil.InStringPs(*p, existingPolicies) {
@@ -102,6 +104,14 @@ func (rm *resourceManager) syncManagedPolicies(
 
 	for _, p := range existingPolicies {
 		if !ackutil.InStringPs(*p, desired.ko.Spec.Policies) {
+			if additive {
+				// In additive mode the controller never detaches managed
+				// policies that were attached out-of-band (for example by a
+				// RolePolicyAttachment resource or another cluster/account).
+				// The delete path clears the mode annotation so that role
+				// teardown still performs a full detach.
+				continue
+			}
 			toDelete = append(toDelete, p)
 		}
 	}
@@ -373,6 +383,57 @@ func customPreCompare(
 	b *resource,
 ) {
 	compareTags(delta, a, b)
+	comparePolicies(delta, a, b)
+}
+
+// policyReconcileModeAnnotation, when set to "additive" on a Role, tells the
+// controller to attach the managed policies listed in Spec.Policies without
+// ever detaching managed policies that are attached out-of-band (for example
+// by a RolePolicyAttachment resource or a role shared across clusters or
+// accounts). Any other value, or the annotation being absent, preserves the
+// default "authoritative" behavior where Spec.Policies is the exact desired set
+// and any drift is removed.
+const policyReconcileModeAnnotation = "iam.services.k8s.aws/policy-reconciliation-mode"
+
+// isAdditivePolicyMode returns true when the supplied Role has opted into
+// additive managed-policy reconciliation via annotation.
+func isAdditivePolicyMode(r *resource) bool {
+	if r == nil || r.ko == nil {
+		return false
+	}
+	v, ok := r.ko.ObjectMeta.Annotations[policyReconcileModeAnnotation]
+	return ok && strings.EqualFold(strings.TrimSpace(v), "additive")
+}
+
+// comparePolicies compares the desired (a) and latest (b) managed policy sets.
+//
+// This replaces the generated Spec.Policies comparison (which is marked
+// is_ignored in generator.yaml) so that comparison can be mode-aware. In the
+// default authoritative mode it reproduces the generated exact-set comparison.
+// In additive mode only missing desired policies are reported as drift; extra
+// policies attached out-of-band are ignored so the controller never detaches
+// them and does not requeue endlessly.
+func comparePolicies(
+	delta *ackcompare.Delta,
+	a *resource,
+	b *resource,
+) {
+	if isAdditivePolicyMode(a) {
+		for _, p := range a.ko.Spec.Policies {
+			if !ackutil.InStringPs(*p, b.ko.Spec.Policies) {
+				delta.Add("Spec.Policies", a.ko.Spec.Policies, b.ko.Spec.Policies)
+				return
+			}
+		}
+		return
+	}
+	if len(a.ko.Spec.Policies) != len(b.ko.Spec.Policies) {
+		delta.Add("Spec.Policies", a.ko.Spec.Policies, b.ko.Spec.Policies)
+	} else if len(a.ko.Spec.Policies) > 0 {
+		if !ackcompare.SliceStringPEqual(a.ko.Spec.Policies, b.ko.Spec.Policies) {
+			delta.Add("Spec.Policies", a.ko.Spec.Policies, b.ko.Spec.Policies)
+		}
+	}
 }
 
 // compareTags is a custom comparison function for comparing lists of Tag
