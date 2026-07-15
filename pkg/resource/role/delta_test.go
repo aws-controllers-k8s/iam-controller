@@ -419,3 +419,105 @@ func TestNewResourceDelta_AssumeRolePolicyDocument(t *testing.T) {
 		})
 	}
 }
+
+// roleWithManagedPolicies builds a *resource with the supplied managed policy
+// ARNs and, optionally, the additive policy-reconciliation mode annotation.
+func roleWithManagedPolicies(additive bool, arns ...string) *resource {
+	policies := make([]*string, 0, len(arns))
+	for _, a := range arns {
+		policies = append(policies, aws.String(a))
+	}
+	r := &resource{
+		ko: &svcapitypes.Role{
+			Spec: svcapitypes.RoleSpec{
+				Name:     aws.String("test-role"),
+				Policies: policies,
+			},
+		},
+	}
+	if additive {
+		r.ko.ObjectMeta.Annotations = map[string]string{
+			policyReconcileModeAnnotation: "additive",
+		}
+	}
+	return r
+}
+
+func TestNewResourceDelta_ManagedPolicies(t *testing.T) {
+	const (
+		arnA = "arn:aws:iam::aws:policy/A"
+		arnB = "arn:aws:iam::aws:policy/B"
+		arnC = "arn:aws:iam::aws:policy/C"
+	)
+	tests := []struct {
+		name           string
+		desiredAdditiv bool
+		desired        []string
+		latest         []string
+		wantDiff       bool
+	}{
+		{
+			name:     "authoritative: identical sets produce no diff",
+			desired:  []string{arnA, arnB},
+			latest:   []string{arnA, arnB},
+			wantDiff: false,
+		},
+		{
+			name:     "authoritative: extra attached policy produces a diff",
+			desired:  []string{arnA},
+			latest:   []string{arnA, arnB},
+			wantDiff: true,
+		},
+		{
+			name:     "authoritative: missing desired policy produces a diff",
+			desired:  []string{arnA, arnB},
+			latest:   []string{arnA},
+			wantDiff: true,
+		},
+		{
+			name:           "additive: identical sets produce no diff",
+			desiredAdditiv: true,
+			desired:        []string{arnA, arnB},
+			latest:         []string{arnA, arnB},
+			wantDiff:       false,
+		},
+		{
+			name:           "additive: extra out-of-band policy produces no diff",
+			desiredAdditiv: true,
+			desired:        []string{arnA},
+			latest:         []string{arnA, arnB, arnC},
+			wantDiff:       false,
+		},
+		{
+			name:           "additive: missing desired policy still produces a diff",
+			desiredAdditiv: true,
+			desired:        []string{arnA, arnB},
+			latest:         []string{arnA},
+			wantDiff:       true,
+		},
+		{
+			name:           "additive: empty desired never drifts against attached policies",
+			desiredAdditiv: true,
+			desired:        []string{},
+			latest:         []string{arnA, arnB},
+			wantDiff:       false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			a := roleWithManagedPolicies(tc.desiredAdditiv, tc.desired...)
+			b := roleWithManagedPolicies(false, tc.latest...)
+
+			delta := newResourceDelta(a, b)
+
+			if tc.wantDiff {
+				assert.True(t, delta.DifferentAt("Spec.Policies"),
+					"expected a diff at Spec.Policies but got none")
+			} else {
+				assert.False(t, delta.DifferentAt("Spec.Policies"),
+					"expected no diff at Spec.Policies but got one")
+			}
+		})
+	}
+}
