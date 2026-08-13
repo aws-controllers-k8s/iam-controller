@@ -4,7 +4,6 @@ go 1.25.0
 
 require (
 	github.com/aws-controllers-k8s/runtime v0.62.0
-	github.com/aws/aws-sdk-go v1.49.0
 	github.com/aws/aws-sdk-go-v2 v1.34.0
 	github.com/aws/aws-sdk-go-v2/service/iam v1.38.8
 	github.com/aws/smithy-go v1.22.2
@@ -49,7 +48,6 @@ require (
 	github.com/itchyny/gojq v0.12.6 // indirect
 	github.com/itchyny/timefmt-go v0.1.3 // indirect
 	github.com/jaypipes/envutil v1.0.0 // indirect
-	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect

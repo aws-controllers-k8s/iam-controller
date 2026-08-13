@@ -16,7 +16,6 @@ package util
 import (
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
 	ackutil "github.com/aws-controllers-k8s/runtime/pkg/util"
-	svcsdk "github.com/aws/aws-sdk-go/service/iam"
 )
 
 // computeTagsDelta compares two Tag arrays and return two different list
@@ -56,19 +55,6 @@ func EqualTags(
 ) bool {
 	addedOrUpdated, removed := computeTagsDelta(a, b)
 	return len(addedOrUpdated) == 0 && len(removed) == 0
-}
-
-// svcTagsFromResourceTags transforms a *svcapitypes.Tag array to a *svcsdk.Tag
-// array.
-func sdkTagsFromResourceTags(rTags []*svcapitypes.Tag) []*svcsdk.Tag {
-	tags := make([]*svcsdk.Tag, len(rTags))
-	for i := range rTags {
-		tags[i] = &svcsdk.Tag{
-			Key:   rTags[i].Key,
-			Value: rTags[i].Value,
-		}
-	}
-	return tags
 }
 
 func equalStrings(a, b *string) bool {
