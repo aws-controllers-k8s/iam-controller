@@ -38,6 +38,7 @@ type ServiceLinkedRoleSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	// +kubebuilder:validation:Required
 	AWSServiceName *string `json:"awsServiceName"`
+	//
 	// A string that you provide, which is combined with the service-provided prefix
 	// to form the complete role name. If you make multiple requests for the same
 	// service, then you must supply a different CustomSuffix for each request.
