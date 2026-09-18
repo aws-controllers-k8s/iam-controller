@@ -214,6 +214,12 @@ resources:
           input_fields:
             RoleName: Name
     fields:
+      # IAM has no rename API and GetRole looks the role up by name, so changing
+      # Name makes the controller lose track of the role it created: the lookup
+      # 404s, a second role is created under the new name and the original is
+      # orphaned outside of ACK's management.
+      Name:
+        is_immutable: true
       MaxSessionDuration:
         late_initialize: {}
       PermissionsBoundary:
