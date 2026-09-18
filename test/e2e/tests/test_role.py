@@ -18,6 +18,7 @@ import json
 import time
 
 import pytest
+from kubernetes.client.exceptions import ApiException
 
 from acktest.k8s import condition
 from acktest.k8s import resource as k8s
@@ -375,7 +376,22 @@ class TestRole:
         # make sure the resource is not in an "update infinite loop"
         condition.assert_synced(ref)
 
-    
+    def test_name_immutable(self, simple_role):
+        # IAM has no rename API, so a rename used to make the controller create
+        # a second role and orphan the original.
+        # See: https://github.com/aws-controllers-k8s/community/issues/2268
+        ref, _ = simple_role
+
+        with pytest.raises(ApiException) as exc_info:
+            k8s.patch_custom_resource(ref, {"spec": {"name": f"{ref.name}-renamed"}})
+
+        assert exc_info.value.status == 422
+        assert "immutable" in str(exc_info.value.body)
+
+        cr = k8s.get_resource(ref)
+        assert cr['spec']['name'] == ref.name
+        condition.assert_synced(ref)
+
     def test_role_adopt(self, adopt_role):
         ref, cr = adopt_role
 

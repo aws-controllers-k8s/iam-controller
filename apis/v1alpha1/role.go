@@ -82,6 +82,7 @@ type RoleSpec struct {
 	// with no spaces. You can also include any of the following characters: _+=,.@-
 	//
 	// Regex Pattern: `^[\w+=,.@-]+$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	// +kubebuilder:validation:Required
 	Name *string `json:"name"`
 	// The path to the role. For more information about paths, see IAM Identifiers
