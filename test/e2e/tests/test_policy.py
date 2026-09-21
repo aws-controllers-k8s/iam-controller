@@ -17,6 +17,7 @@ import json
 import time
 
 import pytest
+from kubernetes.client.exceptions import ApiException
 
 from enum import Enum
 from acktest.k8s import condition
@@ -240,6 +241,24 @@ class TestPolicy:
         after_pv = policy.get_version(policy_arn, "v2")
         after_doc = after_pv["Document"]
         assert after_doc == new_policy_doc
+
+    def test_name_immutable(self, simple_policy):
+        # There is no rename API, and Policy's update path is fully custom
+        # (there is no UpdatePolicy operation), so a changed Name used to be
+        # silently dropped: the old policy stayed as-is in AWS and no error
+        # was surfaced.
+        # See: https://github.com/aws-controllers-k8s/community/issues/2744
+        ref, _, _ = simple_policy
+
+        with pytest.raises(ApiException) as exc_info:
+            k8s.patch_custom_resource(ref, {"spec": {"name": f"{ref.name}-renamed"}})
+
+        assert exc_info.value.status == 422
+        assert "immutable" in str(exc_info.value.body)
+
+        cr = k8s.get_resource(ref)
+        assert cr['spec']['name'] == ref.name
+        condition.assert_synced(ref)
 
     @pytest.mark.resource_data({'adoption-policy': ADOPT_ADOPTION_POLICY, 'filename': 'policy_adopt', 'resource_name': 'adopt'})
     def test_policy_adopt_update(self, adopt_policy):
