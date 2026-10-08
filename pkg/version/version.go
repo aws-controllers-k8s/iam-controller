@@ -27,6 +27,6 @@ var (
 // that generated this controller's code. They are baked in at code-generation
 // time and are immutable for the life of the generated code.
 const (
-	ACKGenerateVersion   = "v0.64.0-5-g3c297c6"
-	ACKGenerateBuildDate = "2026-10-08T19:32:29Z"
+	ACKGenerateVersion   = "v0.65.0"
+	ACKGenerateBuildDate = "2026-10-08T22:27:06Z"
 )
