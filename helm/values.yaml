@@ -84,7 +84,7 @@ resources:
     cpu: "50m"
   limits:
     memory: "128Mi"
-    cpu: "100m"
+    # cpu: "100m"  # Optional: Uncomment to set a CPU limit (may cause throttling)
 
 aws:
   # If specified, use the AWS region for AWS API calls
