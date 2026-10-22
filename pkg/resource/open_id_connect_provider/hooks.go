@@ -184,19 +184,24 @@ func (rm *resourceManager) syncTags(
 		}
 	}
 
-	if len(toAdd) > 0 {
-		for _, t := range toAdd {
-			rlog.Debug("adding tag to OpenIDConnectProvider", "key", *t.Key, "value", *t.Value)
-		}
-		if err = rm.addTags(ctx, r, toAdd); err != nil {
-			return err
-		}
-	}
+	// NOTE(#3102): Remove tags before adding them. A tag whose value changed
+	// appears in both toDelete (old key=value) and toAdd (new key=value).
+	// UntagOpenIDConnectProvider works by key only, so adding first and
+	// removing second would delete the freshly written tag. Removing first
+	// preserves the new value.
 	if len(toDelete) > 0 {
 		for _, t := range toDelete {
 			rlog.Debug("removing tag from OpenIDConnectProvider", "key", *t.Key, "value", *t.Value)
 		}
 		if err = rm.removeTags(ctx, r, toDelete); err != nil {
+			return err
+		}
+	}
+	if len(toAdd) > 0 {
+		for _, t := range toAdd {
+			rlog.Debug("adding tag to OpenIDConnectProvider", "key", *t.Key, "value", *t.Value)
+		}
+		if err = rm.addTags(ctx, r, toAdd); err != nil {
 			return err
 		}
 	}

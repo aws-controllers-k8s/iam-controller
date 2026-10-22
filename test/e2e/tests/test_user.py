@@ -138,6 +138,34 @@ class TestUser:
         latest_tags = user.get_tags(user_name)
         assert tag.cleaned(latest_tags) == after_update_expected_tags
 
+        # Regression test for changing the *value* of an existing tag key.
+        # A changed value puts the key in both the add list (new key=value)
+        # and the delete list (old key=value), because tags are matched on
+        # key AND value. If tags are added before being removed, UntagUser
+        # (which works by key only) deletes the freshly written tag and the
+        # key disappears entirely while the CR still reports ResourceSynced.
+        # See: https://github.com/aws-controllers-k8s/community/issues/3102
+        changed_value_tags = [
+            {
+                "key": "tag2",
+                "value": "newval",
+            }
+        ]
+        updates = {
+            "spec": {"tags": changed_value_tags},
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        changed_value_expected_tags = [
+            {
+                "Key": "tag2",
+                "Value": "newval",
+            }
+        ]
+        latest_tags = user.get_tags(user_name)
+        assert tag.cleaned(latest_tags) == changed_value_expected_tags
+
         # Attempt to add and remove inline policies from the user
         inline_doc = '''{
 "Version": "2012-10-17",
