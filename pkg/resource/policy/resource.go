@@ -97,6 +97,14 @@ func (r *resource) SetIdentifiers(identifier *ackv1alpha1.AWSIdentifiers) error 
 
 // PopulateResourceFromAnnotation populates the fields passed from adoption annotation
 func (r *resource) PopulateResourceFromAnnotation(fields map[string]string) error {
+	if name, ok := fields["name"]; ok && fields["arn"] == "" {
+		r.ko.Spec.Name = &name
+		if path, ok := fields["path"]; ok {
+			r.ko.Spec.Path = &path
+		}
+		return nil
+	}
+
 	resourceARN, ok := fields["arn"]
 	if !ok {
 		return ackerrors.NewTerminalError(fmt.Errorf("required field missing: arn"))

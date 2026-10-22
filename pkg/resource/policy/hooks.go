@@ -15,10 +15,12 @@ package policy
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"sort"
 	"time"
 
+	ackv1alpha1 "github.com/aws-controllers-k8s/runtime/apis/core/v1alpha1"
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	ackcondition "github.com/aws-controllers-k8s/runtime/pkg/condition"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
@@ -442,4 +444,29 @@ func (rm *resourceManager) deleteNonDefaultPolicyVersions(
 		)
 	}
 	return nil
+}
+
+// withARNFromName returns a copy of r whose ARN is derived from Spec.Name
+// and Spec.Path when Status does not yet have one.
+func (rm *resourceManager) withARNFromName(r *resource) *resource {
+	if r.ko.Spec.Name == nil {
+		return r
+	}
+	if r.ko.Status.ACKResourceMetadata != nil && r.ko.Status.ACKResourceMetadata.ARN != nil {
+		return r
+	}
+	path := "/"
+	if r.ko.Spec.Path != nil {
+		path = *r.ko.Spec.Path
+	}
+	ko := r.ko.DeepCopy()
+	if ko.Status.ACKResourceMetadata == nil {
+		ko.Status.ACKResourceMetadata = &ackv1alpha1.ResourceMetadata{}
+	}
+	arn := ackv1alpha1.AWSResourceName(fmt.Sprintf(
+		"arn:%s:iam::%s:policy%s%s",
+		rm.awsPartition, rm.awsAccountID, path, *r.ko.Spec.Name,
+	))
+	ko.Status.ACKResourceMetadata.ARN = &arn
+	return &resource{ko: ko}
 }
