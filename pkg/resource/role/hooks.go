@@ -414,28 +414,33 @@ func (rm *resourceManager) syncTags(
 	}
 
 	for _, t := range existingTags {
-		if !inTags(*t.Key, *t.Value, desired.ko.Spec.Tags) {
+		// NOTE(#3102): inTags compares key AND value, so a tag whose value
+		// changed lands in both toAdd (new key=value) and toDelete (old
+		// key=value). UntagRole removes by key only, so deleting such a key
+		// would drop the tag the add just wrote. TagRole already overwrites an
+		// existing key's value, so a changed value only needs the add: exclude
+		// any key that is also in toAdd from toDelete. This keeps the tag
+		// present throughout (no window where it is absent, which could trip
+		// tag-referencing policies or an SCP that blocks the untag) and makes
+		// the add/remove ordering irrelevant.
+		if !inTags(*t.Key, *t.Value, desired.ko.Spec.Tags) && !hasKey(*t.Key, toAdd) {
 			toDelete = append(toDelete, t)
 		}
 	}
 
-	// NOTE(#3102): Remove tags before adding them. A tag whose value changed
-	// appears in both toDelete (old key=value) and toAdd (new key=value).
-	// UntagRole works by key only, so adding first and removing second would
-	// delete the freshly written tag. Removing first preserves the new value.
-	if len(toDelete) > 0 {
-		for _, t := range toDelete {
-			rlog.Debug("removing tag from role", "key", *t.Key, "value", *t.Value)
-		}
-		if err = rm.removeTags(ctx, desired, toDelete); err != nil {
-			return err
-		}
-	}
 	if len(toAdd) > 0 {
 		for _, t := range toAdd {
 			rlog.Debug("adding tag to role", "key", *t.Key, "value", *t.Value)
 		}
 		if err = rm.addTags(ctx, desired, toAdd); err != nil {
+			return err
+		}
+	}
+	if len(toDelete) > 0 {
+		for _, t := range toDelete {
+			rlog.Debug("removing tag from role", "key", *t.Key, "value", *t.Value)
+		}
+		if err = rm.removeTags(ctx, desired, toDelete); err != nil {
 			return err
 		}
 	}
@@ -455,6 +460,21 @@ func inTags(
 ) bool {
 	for _, t := range tags {
 		if *t.Key == key && *t.Value == value {
+			return true
+		}
+	}
+	return false
+}
+
+// hasKey returns true if any Tag in the supplied list has the supplied key,
+// regardless of its value. Used to avoid scheduling a key for deletion when
+// the same key is already being added with a new value (see NOTE(#3102)).
+func hasKey(
+	key string,
+	tags []*svcapitypes.Tag,
+) bool {
+	for _, t := range tags {
+		if *t.Key == key {
 			return true
 		}
 	}
