@@ -195,6 +195,8 @@ resources:
         template_path: hooks/role/sdk_update_pre_build_request.go.tpl
       sdk_delete_pre_build_request:
         template_path: hooks/role/sdk_delete_pre_build_request.go.tpl
+      late_initialize_post_read_one:
+        template_path: hooks/role/late_initialize_post_read_one.go.tpl
     exceptions:
       terminal_codes:
         - InvalidInput

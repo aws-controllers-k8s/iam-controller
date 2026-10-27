@@ -13,6 +13,7 @@
 
 """Integration tests for the IAM Role resource"""
 
+import datetime
 import logging
 import json
 import time
@@ -388,3 +389,81 @@ class TestRole:
 
         user_policies = get_bootstrap_resources().AdoptedRole.managed_policies
         assert set(cr['spec']['policies']) == set(user_policies) 
+
+
+READY_AFTER_CREATE_SECONDS = 60
+
+
+@pytest.fixture(scope="function")
+def ready_after_create_role():
+    role_name = random_suffix_name("ready-after-create", 32)
+
+    replacements = REPLACEMENT_VALUES.copy()
+    replacements['ROLE_NAME'] = role_name
+    replacements['ROLE_DESCRIPTION'] = ROLE_DESC
+    replacements['READY_AFTER_CREATE'] = f"{READY_AFTER_CREATE_SECONDS}s"
+
+    resource_data = load_resource(
+        "role_ready_after_create",
+        additional_replacements=replacements,
+    )
+
+    ref = k8s.CustomResourceReference(
+        CRD_GROUP, CRD_VERSION, ROLE_RESOURCE_PLURAL,
+        role_name, namespace="default",
+    )
+    k8s.create_custom_resource(ref, resource_data)
+    cr = k8s.wait_resource_consumed_by_controller(ref)
+    assert cr is not None
+
+    yield (ref, cr)
+
+    _, deleted = k8s.delete_custom_resource(
+        ref,
+        period_length=DELETE_WAIT_AFTER_SECONDS,
+    )
+    assert deleted
+
+    role.wait_until_deleted(role_name)
+
+
+@service_marker
+class TestRoleReadyAfterCreate:
+    def test_ready_after_create(self, ready_after_create_role):
+        """A Role annotated with iam.services.k8s.aws/ready-after-create
+        keeps ACK.ResourceSynced=False until the window has passed since
+        its CreateDate, even though the role already exists in IAM.
+        """
+        ref, _ = ready_after_create_role
+        role_name = ref.name
+
+        role.wait_until_exists(role_name)
+        # Give the controller time for the post-create reconcile that
+        # applies updates and evaluates the window, well inside the window.
+        time.sleep(CHECK_STATUS_WAIT_SECONDS)
+
+        condition.assert_not_synced(ref)
+        cond = k8s.get_resource_condition(
+            ref, condition.CONDITION_TYPE_RESOURCE_SYNCED,
+        )
+        assert "waiting for IAM propagation" in cond.get('message', '')
+
+        assert k8s.wait_on_condition(
+            ref, condition.CONDITION_TYPE_RESOURCE_SYNCED, "True",
+            wait_periods=READY_AFTER_CREATE_SECONDS // 5 * 2,
+            period_length=5,
+        )
+
+        cr = k8s.get_resource(ref)
+        create_date = datetime.datetime.fromisoformat(
+            cr['status']['createDate'].replace('Z', '+00:00'),
+        )
+        cond = k8s.get_resource_condition(
+            ref, condition.CONDITION_TYPE_RESOURCE_SYNCED,
+        )
+        synced_at = datetime.datetime.fromisoformat(
+            cond['lastTransitionTime'].replace('Z', '+00:00'),
+        )
+        assert synced_at - create_date >= datetime.timedelta(
+            seconds=READY_AFTER_CREATE_SECONDS,
+        )
