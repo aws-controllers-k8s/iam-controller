@@ -192,9 +192,10 @@ class TestReferences:
     @pytest.mark.resource_data({'withNamespace': True})
     def test_role_policy_namespace_references(self, referring_role, referred_policy):
 
-        # create the resources in order that initially the reference resolution
-        # fails and then when the referenced resource gets created, then all
-        # resolutions eventually pass and resources get synced.
+        # Cross-namespace references are disabled by default
+        # (--enable-cross-namespace=false), so a Role referring to a Policy in
+        # another namespace must be rejected rather than resolved, even after
+        # the referred-to Policy exists and is synced.
         time.sleep(CHECK_WAIT_AFTER_REF_RESOLVE_SECONDS)
 
         role_ref, role_cr, role_name = referring_role
@@ -206,9 +207,18 @@ class TestReferences:
         time.sleep(CHECK_WAIT_AFTER_REF_RESOLVE_SECONDS)
 
         condition.assert_synced(policy_ref)
-        condition.assert_synced(role_ref)
 
-        role.wait_until_exists(role_name)
+        assert k8s.wait_on_condition(
+            role_ref, condition.CONDITION_TYPE_REFERENCES_RESOLVED, "False",
+            wait_periods=5,
+        )
+        cond = k8s.get_resource_condition(
+            role_ref, condition.CONDITION_TYPE_REFERENCES_RESOLVED,
+        )
+        assert "cross-namespace resource reference is not allowed" in cond.get("reason", "")
+
+        # The reference never resolves, so the Role is never created in IAM.
+        assert role.get(role_name) is None
 
         # NOTE(jaypipes): We need to manually delete the Role first because
         # pytest fixtures will try to clean up the Policy fixture *first*
@@ -220,6 +230,4 @@ class TestReferences:
             period_length=DELETE_ROLE_TIMEOUT_SECONDS,
         )
         assert deleted
-
-        role.wait_until_deleted(role_name)
     
