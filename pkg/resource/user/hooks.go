@@ -403,7 +403,7 @@ func (rm *resourceManager) syncTags(
 		// present throughout (no window where it is absent, which could trip
 		// tag-referencing policies or an SCP that blocks the untag) and makes
 		// the add/remove ordering irrelevant.
-		if !inTags(*t.Key, *t.Value, desired.ko.Spec.Tags) && !hasKey(*t.Key, toAdd) {
+		if !hasKey(*t.Key, desired.ko.Spec.Tags) {
 			toDelete = append(toDelete, t)
 		}
 	}
