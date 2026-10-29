@@ -394,15 +394,11 @@ func (rm *resourceManager) syncTags(
 	}
 
 	for _, t := range existingTags {
-		// NOTE(#3102): inTags compares key AND value, so a tag whose value
-		// changed lands in both toAdd (new key=value) and toDelete (old
-		// key=value). UntagUser removes by key only, so deleting such a key
-		// would drop the tag the add just wrote. TagUser already overwrites an
-		// existing key's value, so a changed value only needs the add: exclude
-		// any key that is also in toAdd from toDelete. This keeps the tag
-		// present throughout (no window where it is absent, which could trip
-		// tag-referencing policies or an SCP that blocks the untag) and makes
-		// the add/remove ordering irrelevant.
+		// NOTE(#3102): only delete keys that are absent from the desired tags.
+		// UntagUser removes by key only, and TagUser overwrites an
+		// existing key's value, so a tag whose value changed needs just the add.
+		// Deleting it first would leave a window where the tag is absent, which
+		// could trip tag-referencing policies or an SCP that blocks the untag.
 		if !hasKey(*t.Key, desired.ko.Spec.Tags) {
 			toDelete = append(toDelete, t)
 		}
@@ -447,8 +443,7 @@ func inTags(
 }
 
 // hasKey returns true if any Tag in the supplied list has the supplied key,
-// regardless of its value. Used to avoid scheduling a key for deletion when
-// the same key is already being added with a new value (see NOTE(#3102)).
+// regardless of its value.
 func hasKey(
 	key string,
 	tags []*svcapitypes.Tag,
