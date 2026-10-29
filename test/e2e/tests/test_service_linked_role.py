@@ -25,52 +25,59 @@ from e2e import role
 
 DELETE_WAIT_AFTER_SECONDS = 10
 CHECK_STATUS_WAIT_SECONDS = 10
-ELASTICBEANSTALK_SERVICE_LINKED_ROLE_NAME="AWSServiceRoleForElasticBeanstalk"
+AUTOSCALING_SERVICE_NAME = "autoscaling.amazonaws.com"
+AUTOSCALING_SERVICE_LINKED_ROLE_PREFIX = "AWSServiceRoleForAutoScaling"
 
 @pytest.fixture(scope="module")
 def service_linked_role():
-    role_name = random_suffix_name("my-simple-role", 24)
+    resource_name = random_suffix_name("my-simple-role", 24)
+    custom_suffix = random_suffix_name("ack-test", 24)
+    service_linked_role_name = (
+        f"{AUTOSCALING_SERVICE_LINKED_ROLE_PREFIX}_{custom_suffix}"
+    )
 
     replacements = REPLACEMENT_VALUES.copy()
-    replacements["ROLE_NAME"] = role_name
+    replacements["ROLE_NAME"] = resource_name
     replacements['ROLE_DESCRIPTION'] = "a service-linked role"
-    replacements['AWS_SERVICE_NAME'] = "elasticbeanstalk.amazonaws.com"
+    replacements['AWS_SERVICE_NAME'] = AUTOSCALING_SERVICE_NAME
+    replacements['CUSTOM_SUFFIX'] = custom_suffix
 
     resource_data = load_resource(
         "service_linked_role",
         additional_replacements=replacements,
     )
 
-    service_linked_role=ELASTICBEANSTALK_SERVICE_LINKED_ROLE_NAME
-
     ref = k8s.CustomResourceReference(
         CRD_GROUP, CRD_VERSION, SERVICE_LINKED_ROLE_RESOURCE_PLURAL,
-        role_name, namespace="default",
+        resource_name, namespace="default",
     )
-    k8s.create_custom_resource(ref, resource_data)
-    cr = k8s.wait_resource_consumed_by_controller(ref)
+    try:
+        k8s.create_custom_resource(ref, resource_data)
+        cr = k8s.wait_resource_consumed_by_controller(ref)
 
-    role.wait_until_exists(service_linked_role)
+        role.wait_until_exists(service_linked_role_name)
 
-    assert cr is not None
-    assert k8s.get_resource_exists(ref)
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert k8s.get_resource_exists(ref)
 
-    yield (ref, cr)
+        yield (ref, cr, service_linked_role_name)
+    finally:
+        if k8s.get_resource_exists(ref):
+            _, deleted = k8s.delete_custom_resource(
+                ref,
+                period_length=DELETE_WAIT_AFTER_SECONDS,
+            )
+            assert deleted
 
-    _, deleted = k8s.delete_custom_resource(
-        ref,
-        period_length=DELETE_WAIT_AFTER_SECONDS,
-    )
-    assert deleted
-
-    role.wait_until_deleted(service_linked_role)
+        if role.get(service_linked_role_name) is not None:
+            role.wait_until_deleted(service_linked_role_name)
 
 @service_marker
 @pytest.mark.canary
 class TestServiceLinkedRole:
     def test_crud(self, service_linked_role):
-        ref, res = service_linked_role
-        role_name = ELASTICBEANSTALK_SERVICE_LINKED_ROLE_NAME
+        ref, _, role_name = service_linked_role
 
         time.sleep(CHECK_STATUS_WAIT_SECONDS)
 
@@ -81,7 +88,7 @@ class TestServiceLinkedRole:
 
         assert latest is not None
         assert latest['Description'] == "a service-linked role"
-        assert latest['Path'] == "/aws-service-role/elasticbeanstalk.amazonaws.com/"
+        assert latest['Path'] == "/aws-service-role/autoscaling.amazonaws.com/"
 
         # Update the service-linked role (if applicable)
         updates = {
