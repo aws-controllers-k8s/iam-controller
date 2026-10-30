@@ -98,7 +98,13 @@ def adopt_policy(request):
     resource_name = data['resource_name']
 
     resource_name = random_suffix_name(resource_name, 24)
-    resource_arn = get_bootstrap_resources().AdoptedPolicy.arns[0]
+    # Select which bootstrapped policy to adopt. Tests that mutate the adopted
+    # policy's version (adopted_resource="AdoptedPolicyForUpdate") use a
+    # dedicated policy so they don't race tests that assert the pristine v1
+    # state of the shared AdoptedPolicy under pytest-xdist. Defaults to the
+    # shared read-only AdoptedPolicy.
+    adopted_resource = data.get('adopted_resource', 'AdoptedPolicy')
+    resource_arn = getattr(get_bootstrap_resources(), adopted_resource).arns[0]
     replacements["POLICY_ADOPTION_NAME"] = resource_name
     replacements["ADOPTION_FIELDS"] = f"{{\\\"arn\\\": \\\"{resource_arn}\\\"}}"
     replacements["POLICY_ADOPTION_NAME"] = resource_name
@@ -260,7 +266,7 @@ class TestPolicy:
         assert cr['spec']['name'] == ref.name
         condition.assert_synced(ref)
 
-    @pytest.mark.resource_data({'adoption-policy': ADOPT_ADOPTION_POLICY, 'filename': 'policy_adopt', 'resource_name': 'adopt'})
+    @pytest.mark.resource_data({'adoption-policy': ADOPT_ADOPTION_POLICY, 'filename': 'policy_adopt', 'resource_name': 'adopt', 'adopted_resource': 'AdoptedPolicyForUpdate'})
     def test_policy_adopt_update(self, adopt_policy):
         ref, cr, policy_arn = adopt_policy
 

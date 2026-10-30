@@ -414,7 +414,12 @@ func (rm *resourceManager) syncTags(
 	}
 
 	for _, t := range existingTags {
-		if !inTags(*t.Key, *t.Value, desired.ko.Spec.Tags) {
+		// NOTE(#3102): only delete keys that are absent from the desired tags.
+		// UntagRole removes by key only, and TagRole overwrites an
+		// existing key's value, so a tag whose value changed needs just the add.
+		// Deleting it first would leave a window where the tag is absent, which
+		// could trip tag-referencing policies or an SCP that blocks the untag.
+		if !hasKey(*t.Key, desired.ko.Spec.Tags) {
 			toDelete = append(toDelete, t)
 		}
 	}
@@ -451,6 +456,20 @@ func inTags(
 ) bool {
 	for _, t := range tags {
 		if *t.Key == key && *t.Value == value {
+			return true
+		}
+	}
+	return false
+}
+
+// hasKey returns true if any Tag in the supplied list has the supplied key,
+// regardless of its value.
+func hasKey(
+	key string,
+	tags []*svcapitypes.Tag,
+) bool {
+	for _, t := range tags {
+		if *t.Key == key {
 			return true
 		}
 	}
