@@ -24,6 +24,9 @@ operations:
     output_wrapper_field_path: Group
 resources:
   Group:
+    print:
+      add_age_column: true
+      add_synced_column: true
     hooks:
       sdk_read_one_post_set_output:
         template_path: hooks/group/sdk_read_one_post_set_output.go.tpl
@@ -75,6 +78,9 @@ resources:
     tags:
       ignore: true
   InstanceProfile:
+    print:
+      add_age_column: true
+      add_synced_column: true
     renames:
       operations:
         CreateInstanceProfile:
@@ -117,6 +123,9 @@ resources:
     update_operation:
       custom_method_name: customUpdateInstanceProfile
   Policy:
+    print:
+      add_age_column: true
+      add_synced_column: true
     renames:
       operations:
         CreatePolicy:
@@ -192,6 +201,9 @@ resources:
         compare:
           is_ignored: true
   Role:
+    print:
+      add_age_column: true
+      add_synced_column: true
     hooks:
       delta_pre_compare:
         code: customPreCompare(delta, a, b)
@@ -268,6 +280,9 @@ resources:
         compare:
           is_ignored: true
   OpenIDConnectProvider:
+    print:
+      add_age_column: true
+      add_synced_column: true
     hooks:
       delta_pre_compare:
         code: customPreCompare(delta, a, b)
@@ -300,6 +315,9 @@ resources:
     update_operation:
       custom_method_name: customUpdateOpenIDConnectProvider
   User:
+    print:
+      add_age_column: true
+      add_synced_column: true
     hooks:
       delta_pre_compare:
         code: compareTags(delta, a, b)
@@ -360,6 +378,9 @@ resources:
         compare:
           is_ignored: true
   ServiceLinkedRole:
+    print:
+      add_age_column: true
+      add_synced_column: true
     tags:
       ignore: true
     hooks:
