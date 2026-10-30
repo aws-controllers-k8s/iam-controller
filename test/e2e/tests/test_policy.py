@@ -95,9 +95,13 @@ def adopt_policy(request):
     filename = data['filename']
     assert 'resource_name' in data
     resource_name = data['resource_name']
+    assert 'bootstrap-policy-index' in data
+    bootstrap_policy_index = data['bootstrap-policy-index']
 
     resource_name = random_suffix_name(resource_name, 24)
-    resource_arn = get_bootstrap_resources().AdoptedPolicy.arns[0]
+    adopted_policy_arns = get_bootstrap_resources().AdoptedPolicy.arns
+    assert bootstrap_policy_index < len(adopted_policy_arns)
+    resource_arn = adopted_policy_arns[bootstrap_policy_index]
     replacements["POLICY_ADOPTION_NAME"] = resource_name
     replacements["ADOPTION_FIELDS"] = f"{{\\\"arn\\\": \\\"{resource_arn}\\\"}}"
     replacements["POLICY_ADOPTION_NAME"] = resource_name
@@ -111,13 +115,21 @@ def adopt_policy(request):
         CRD_GROUP, CRD_VERSION, POLICY_RESOURCE_PLURAL,
         resource_name, namespace="default",
     )
-    k8s.create_custom_resource(ref, resource_data)
+    try:
+        k8s.create_custom_resource(ref, resource_data)
 
-    time.sleep(CREATE_WAIT_AFTER_SECONDS)
-    cr = k8s.wait_resource_consumed_by_controller(ref)
-    assert cr is not None
+        time.sleep(CREATE_WAIT_AFTER_SECONDS)
+        cr = k8s.wait_resource_consumed_by_controller(ref)
+        assert cr is not None
 
-    yield (ref, cr, resource_arn)
+        yield (ref, cr, resource_arn)
+    finally:
+        if k8s.get_resource_exists(ref):
+            _, deleted = k8s.delete_custom_resource(
+                ref,
+                period_length=DELETE_WAIT_AFTER_SECONDS,
+            )
+            assert deleted
 
 
 
@@ -241,12 +253,23 @@ class TestPolicy:
         after_doc = after_pv["Document"]
         assert after_doc == new_policy_doc
 
-    @pytest.mark.resource_data({'adoption-policy': ADOPT_ADOPTION_POLICY, 'filename': 'policy_adopt', 'resource_name': 'adopt'})
+    @pytest.mark.resource_data({
+        'adoption-policy': ADOPT_ADOPTION_POLICY, 
+        'bootstrap-policy-index': 0,
+        'filename': 'policy_adopt', 
+        'resource_name': 'adopt'
+    })
     def test_policy_adopt_update(self, adopt_policy):
         ref, cr, policy_arn = adopt_policy
 
-        k8s.wait_on_condition(ref, "ACK.ResourceSynced", "True", wait_periods=5)
+        assert k8s.wait_on_condition(
+            ref,
+            "ACK.ResourceSynced",
+            "True",
+            wait_periods=5,
+        )
 
+        cr = k8s.get_resource(ref)
         assert cr is not None
         assert 'status' in cr
         assert 'defaultVersionID' in cr['status']
@@ -278,12 +301,23 @@ class TestPolicy:
         policy_doc = policy.get_version(policy_arn, "v2")["Document"]
         assert policy_doc == new_policy_doc
 
-    @pytest.mark.resource_data({'adoption-policy': ADOPT_OR_CREATE_ADOPTION_POLICY, 'filename': 'policy_adopt_or_create', 'resource_name': 'adopt-or-create'})
+    @pytest.mark.resource_data({
+        'adoption-policy': ADOPT_OR_CREATE_ADOPTION_POLICY,
+        'bootstrap-policy-index': 1,
+        'filename': 'policy_adopt_or_create',
+        'resource_name': 'adopt-or-create',
+    })
     def test_policy_adopt_or_create(self, adopt_policy):
         ref, cr, policy_arn = adopt_policy
 
-        k8s.wait_on_condition(ref, "ACK.ResourceSynced", "True", wait_periods=5)
+        assert k8s.wait_on_condition(
+            ref,
+            "ACK.ResourceSynced",
+            "True",
+            wait_periods=5,
+        )
 
+        cr = k8s.get_resource(ref)
         assert cr is not None
         assert 'status' in cr
         assert 'defaultVersionID' in cr['status']
