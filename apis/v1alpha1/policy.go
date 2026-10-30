@@ -47,6 +47,7 @@ type PolicySpec struct {
 	// named both "MyResource" and "myresource".
 	//
 	// Regex Pattern: `^[\w+=,.@-]+$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable once set"
 	// +kubebuilder:validation:Required
 	Name *string `json:"name"`
 	// The path for the policy.

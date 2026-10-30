@@ -148,6 +148,14 @@ resources:
         - InvalidInput
         - MalformedPolicyDocument
     fields:
+      # IAM has no rename API, and Policy's update path is fully custom (there
+      # is no UpdatePolicy operation) via customUpdatePolicy, which never
+      # checks for a Name delta. Without this, a changed Name is silently
+      # dropped: the old policy is left as-is in AWS, no error is surfaced,
+      # and the CR is (incorrectly) reported as Synced.
+      # See: https://github.com/aws-controllers-k8s/community/issues/2744
+      Name:
+        is_immutable: true
       # Left for historical purposes. It looks like late_initialize is was
       # causing the controller to infinitely requeue (every 5 seconds) when the
       # description was set to nil. Not it looks like this is not needed
