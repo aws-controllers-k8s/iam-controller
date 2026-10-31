@@ -25,7 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
-	commonutil "github.com/aws-controllers-k8s/iam-controller/pkg/util"
 )
 
 func (rm *resourceManager) customUpdateOpenIDConnectProvider(
@@ -129,12 +128,13 @@ func customPreCompare(
 	a *resource,
 	b *resource,
 ) {
-	if len(a.ko.Spec.Tags) != len(b.ko.Spec.Tags) {
+	fromTags, _ := convertToOrderedACKTags(a.ko.Spec.Tags)
+	toTags, _ := convertToOrderedACKTags(b.ko.Spec.Tags)
+	// The discarded middle return is the "unchanged" set (same key and value in
+	// both inputs); those tags need no AWS API call, so it is ignored.
+	added, _, removed := ackcompare.GetTagsDifference(fromTags, toTags)
+	if len(added) > 0 || len(removed) > 0 {
 		delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
-	} else if len(a.ko.Spec.Tags) > 0 {
-		if !commonutil.EqualTags(a.ko.Spec.Tags, b.ko.Spec.Tags) {
-			delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
-		}
 	}
 
 	if ackcompare.HasNilDifference(a.ko.Spec.URL, b.ko.Spec.URL) {
@@ -164,31 +164,25 @@ func (rm *resourceManager) syncTags(
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.syncTags")
 	defer func(err error) { exit(err) }(err)
-	toAdd := []*svcapitypes.Tag{}
-	toDelete := []*svcapitypes.Tag{}
-
 	existingTags, err := rm.getTags(ctx, r)
 	if err != nil {
 		return err
 	}
 
-	for _, t := range r.ko.Spec.Tags {
-		if !inTags(*t.Key, *t.Value, existingTags) {
-			toAdd = append(toAdd, t)
-		}
-	}
+	fromTags, _ := convertToOrderedACKTags(existingTags)
+	toTags, toOrder := convertToOrderedACKTags(r.ko.Spec.Tags)
+	// A tag whose value changed lands in added only (upsert), so it is not
+	// untagged first.
+	// The discarded middle return is the "unchanged" set (same key and value in
+	// both inputs); those tags need no AWS API call, so it is ignored.
+	added, _, removed := ackcompare.GetTagsDifference(fromTags, toTags)
+	toAdd := fromACKTags(added, toOrder)
+	toRemove := fromACKTags(removed, nil)
 
-	for _, t := range existingTags {
-		// NOTE(#3102): only delete keys that are absent from the desired tags.
-		// UntagOpenIDConnectProvider removes by key only, and TagOpenIDConnectProvider overwrites an
-		// existing key's value, so a tag whose value changed needs just the add.
-		// Deleting it first would leave a window where the tag is absent, which
-		// could trip tag-referencing policies or an SCP that blocks the untag.
-		if !hasKey(*t.Key, r.ko.Spec.Tags) {
-			toDelete = append(toDelete, t)
-		}
-	}
-
+	// NOTE(#3102): add before remove, intentionally. Adding first avoids a window
+	// where a desired tag is missing, which could trip tag-referencing policies
+	// or an SCP. GetTagsDifference keeps the key sets of added and removed
+	// disjoint, so the order does not change the final tag set on the OpenIDConnectProvider.
 	if len(toAdd) > 0 {
 		for _, t := range toAdd {
 			rlog.Debug("adding tag to OpenIDConnectProvider", "key", *t.Key, "value", *t.Value)
@@ -197,48 +191,16 @@ func (rm *resourceManager) syncTags(
 			return err
 		}
 	}
-	if len(toDelete) > 0 {
-		for _, t := range toDelete {
+	if len(toRemove) > 0 {
+		for _, t := range toRemove {
 			rlog.Debug("removing tag from OpenIDConnectProvider", "key", *t.Key, "value", *t.Value)
 		}
-		if err = rm.removeTags(ctx, r, toDelete); err != nil {
+		if err = rm.removeTags(ctx, r, toRemove); err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-// inTags returns true if the supplied key and value can be found in the
-// supplied list of Tag structs.
-//
-// TODO(jaypipes): When we finally standardize Tag handling in ACK, move this
-// to the ACK common runtime/ or pkg/ repos
-func inTags(
-	key string,
-	value string,
-	tags []*svcapitypes.Tag,
-) bool {
-	for _, t := range tags {
-		if *t.Key == key && t.Value != nil && *t.Value == value {
-			return true
-		}
-	}
-	return false
-}
-
-// hasKey returns true if any Tag in the supplied list has the supplied key,
-// regardless of its value.
-func hasKey(
-	key string,
-	tags []*svcapitypes.Tag,
-) bool {
-	for _, t := range tags {
-		if *t.Key == key {
-			return true
-		}
-	}
-	return false
 }
 
 // getTags returns the list of tags attached to the OpenIDConnectProvider
