@@ -4,7 +4,6 @@ import (
 	"context"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
-	commonutil "github.com/aws-controllers-k8s/iam-controller/pkg/util"
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
 	svcsdk "github.com/aws/aws-sdk-go-v2/service/iam"
@@ -125,26 +124,25 @@ func (rm *resourceManager) syncTags(
 	exit := rlog.Trace("rm.syncTags")
 	defer func() { exit(err) }()
 
-	toAdd := []*svcapitypes.Tag{}
-	toDelete := []*svcapitypes.Tag{}
-	existingTags := latest.ko.Spec.Tags
+	fromTags, _ := convertToOrderedACKTags(latest.ko.Spec.Tags)
+	toTags, toOrder := convertToOrderedACKTags(desired.ko.Spec.Tags)
+	// A tag whose value changed lands in added only (upsert), so it is not untagged first.
+	// The discarded middle return is the "unchanged" set (same key and value in
+	// both inputs); those tags need no AWS API call, so it is ignored.
+	added, _, removed := ackcompare.GetTagsDifference(fromTags, toTags)
+	toAdd := fromACKTags(added, toOrder)
+	toRemove := fromACKTags(removed, nil)
 
-	for _, t := range existingTags {
-		if !inTags(*t.Key, *t.Value, desired.ko.Spec.Tags) {
-			toDelete = append(toDelete, t)
-		}
-	}
-	for _, t := range desired.ko.Spec.Tags {
-		if !inTags(*t.Key, *t.Value, existingTags) {
-			toAdd = append(toAdd, t)
-		}
-	}
-
-	if len(toDelete) > 0 {
-		for _, t := range toDelete {
+	// Remove before add, intentionally: this order is kept from the previous
+	// implementation, where a changed value appeared in both lists and had to
+	// be untagged first. GetTagsDifference keeps the key sets of added and
+	// removed disjoint, so the order no longer changes the final tag set; it is
+	// kept to avoid a behaviour change and to free tag quota before adding.
+	if len(toRemove) > 0 {
+		for _, t := range toRemove {
 			rlog.Debug("removing tag from instance profile", "key", *t.Key, "value", *t.Value)
 		}
-		if err = rm.removeTags(ctx, desired, toDelete); err != nil {
+		if err = rm.removeTags(ctx, desired, toRemove); err != nil {
 			return err
 		}
 	}
@@ -158,21 +156,6 @@ func (rm *resourceManager) syncTags(
 	}
 
 	return nil
-}
-
-// inTags returns true if the supplied key and value can be found in the
-// supplied list of Tag structs.
-func inTags(
-	key string,
-	value string,
-	tags []*svcapitypes.Tag,
-) bool {
-	for _, t := range tags {
-		if *t.Key == key && *t.Value == value {
-			return true
-		}
-	}
-	return false
 }
 
 // addTags adds the supplied Tags to the supplied InstanceProfile resource
@@ -230,11 +213,12 @@ func compareTags(
 	a *resource,
 	b *resource,
 ) {
-	if len(a.ko.Spec.Tags) != len(b.ko.Spec.Tags) {
+	fromTags, _ := convertToOrderedACKTags(a.ko.Spec.Tags)
+	toTags, _ := convertToOrderedACKTags(b.ko.Spec.Tags)
+	// The discarded middle return is the "unchanged" set (same key and value in
+	// both inputs); those tags need no AWS API call, so it is ignored.
+	added, _, removed := ackcompare.GetTagsDifference(fromTags, toTags)
+	if len(added) > 0 || len(removed) > 0 {
 		delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
-	} else if len(a.ko.Spec.Tags) > 0 {
-		if !commonutil.EqualTags(a.ko.Spec.Tags, b.ko.Spec.Tags) {
-			delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
-		}
 	}
 }

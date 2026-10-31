@@ -27,7 +27,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	svcapitypes "github.com/aws-controllers-k8s/iam-controller/apis/v1alpha1"
-	commonutil "github.com/aws-controllers-k8s/iam-controller/pkg/util"
 )
 
 const (
@@ -81,28 +80,26 @@ func (rm *resourceManager) syncTags(
 	rlog := ackrtlog.FromContext(ctx)
 	exit := rlog.Trace("rm.syncTags")
 	defer func() { exit(err) }()
-	toAdd := []*svcapitypes.Tag{}
-	toDelete := []*svcapitypes.Tag{}
 
-	existingTags := latest.ko.Spec.Tags
+	fromTags, _ := convertToOrderedACKTags(latest.ko.Spec.Tags)
+	toTags, toOrder := convertToOrderedACKTags(desired.ko.Spec.Tags)
+	// A tag whose value changed lands in added only (upsert), so it is not untagged first.
+	// The discarded middle return is the "unchanged" set (same key and value in
+	// both inputs); those tags need no AWS API call, so it is ignored.
+	added, _, removed := ackcompare.GetTagsDifference(fromTags, toTags)
+	toAdd := fromACKTags(added, toOrder)
+	toRemove := fromACKTags(removed, nil)
 
-	for _, t := range desired.ko.Spec.Tags {
-		if !inTags(*t.Key, *t.Value, existingTags) {
-			toAdd = append(toAdd, t)
-		}
-	}
-
-	for _, t := range existingTags {
-		if !inTags(*t.Key, *t.Value, desired.ko.Spec.Tags) {
-			toDelete = append(toDelete, t)
-		}
-	}
-
-	if len(toDelete) > 0 {
-		for _, t := range toDelete {
+	// Remove before add, intentionally: this order is kept from the previous
+	// implementation, where a changed value appeared in both lists and had to
+	// be untagged first. GetTagsDifference keeps the key sets of added and
+	// removed disjoint, so the order no longer changes the final tag set; it is
+	// kept to avoid a behaviour change and to free tag quota before adding.
+	if len(toRemove) > 0 {
+		for _, t := range toRemove {
 			rlog.Debug("removing tag from policy", "key", *t.Key, "value", *t.Value)
 		}
-		if err = rm.removeTags(ctx, desired, toDelete); err != nil {
+		if err = rm.removeTags(ctx, desired, toRemove); err != nil {
 			return err
 		}
 	}
@@ -125,31 +122,14 @@ func compareTags(
 	a *resource,
 	b *resource,
 ) {
-	if len(a.ko.Spec.Tags) != len(b.ko.Spec.Tags) {
+	fromTags, _ := convertToOrderedACKTags(a.ko.Spec.Tags)
+	toTags, _ := convertToOrderedACKTags(b.ko.Spec.Tags)
+	// The discarded middle return is the "unchanged" set (same key and value in
+	// both inputs); those tags need no AWS API call, so it is ignored.
+	added, _, removed := ackcompare.GetTagsDifference(fromTags, toTags)
+	if len(added) > 0 || len(removed) > 0 {
 		delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
-	} else if len(a.ko.Spec.Tags) > 0 {
-		if !commonutil.EqualTags(a.ko.Spec.Tags, b.ko.Spec.Tags) {
-			delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
-		}
 	}
-}
-
-// inTags returns true if the supplied key and value can be found in the
-// supplied list of Tag structs.
-//
-// TODO(jaypipes): When we finally standardize Tag handling in ACK, move this
-// to the ACK common runtime/ or pkg/ repos
-func inTags(
-	key string,
-	value string,
-	tags []*svcapitypes.Tag,
-) bool {
-	for _, t := range tags {
-		if *t.Key == key && *t.Value == value {
-			return true
-		}
-	}
-	return false
 }
 
 // getTags returns the list of tags attached to the Policy
