@@ -49,6 +49,11 @@ func newResourceDelta(
 			delta.Add("Spec.ClientIDs", a.ko.Spec.ClientIDs, b.ko.Spec.ClientIDs)
 		}
 	}
+	desiredACKTags, _ := convertToOrderedACKTags(a.ko.Spec.Tags)
+	latestACKTags, _ := convertToOrderedACKTags(b.ko.Spec.Tags)
+	if !ackcompare.MapStringStringEqual(desiredACKTags, latestACKTags) {
+		delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
+	}
 	if len(a.ko.Spec.Thumbprints) != len(b.ko.Spec.Thumbprints) {
 		delta.Add("Spec.Thumbprints", a.ko.Spec.Thumbprints, b.ko.Spec.Thumbprints)
 	} else if len(a.ko.Spec.Thumbprints) > 0 {

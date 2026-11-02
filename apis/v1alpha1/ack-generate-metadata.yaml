@@ -7,7 +7,7 @@ api_directory_checksum: 342b85683934b5ced49678842d2468b5a9409749
 api_version: v1alpha1
 aws_sdk_go_version: v1.32.6
 generator_config_info:
-  file_checksum: 9c15a347b2049aa5d606b9e2cf84157e192dc9e9
+  file_checksum: 767e5198a753b9e260d0cb7e997d1afad07dcdda
   original_file_name: generator.yaml
 last_modification:
   reason: API generation
