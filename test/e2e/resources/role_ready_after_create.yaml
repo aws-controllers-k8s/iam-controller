@@ -1,0 +1,22 @@
+apiVersion: iam.services.k8s.aws/v1alpha1
+kind: Role
+metadata:
+  name: $ROLE_NAME
+  annotations:
+    iam.services.k8s.aws/ready-after-create: $READY_AFTER_CREATE
+spec:
+  name: $ROLE_NAME
+  description: $ROLE_DESCRIPTION
+  assumeRolePolicyDocument: >
+    {
+      "Version":"2012-10-17",
+      "Statement": [{
+        "Effect":"Allow",
+        "Principal": {
+          "Service": [
+            "ec2.amazonaws.com"
+          ]
+        },
+        "Action": ["sts:AssumeRole"]
+      }]
+    }
