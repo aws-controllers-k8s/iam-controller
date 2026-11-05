@@ -15,10 +15,12 @@ package policy
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"sort"
 	"time"
 
+	ackv1alpha1 "github.com/aws-controllers-k8s/runtime/apis/core/v1alpha1"
 	ackcompare "github.com/aws-controllers-k8s/runtime/pkg/compare"
 	ackcondition "github.com/aws-controllers-k8s/runtime/pkg/condition"
 	ackrtlog "github.com/aws-controllers-k8s/runtime/pkg/runtime/log"
@@ -442,4 +444,45 @@ func (rm *resourceManager) deleteNonDefaultPolicyVersions(
 		)
 	}
 	return nil
+}
+
+// orphanedPolicyARN returns the ARN of the policy when the resource is managed
+// but its status has no ARN, and nil otherwise.
+//
+// The runtime marks a resource managed (adds the ACK finalizer) right before
+// it calls CreatePolicy and unmarks it when CreatePolicy fails with an AWS
+// error. A managed Policy without an ARN therefore had a CreatePolicy call
+// whose result was never saved: the controller stopped mid-create (the node
+// was lost, the pod was killed) or another controller pod took over. GetPolicy
+// accepts only an ARN, so such a policy is never found again: CreatePolicy
+// fails with EntityAlreadyExists on every retry, the resource never syncs and
+// deleting it leaves the IAM policy behind.
+//
+// The ARN of a customer managed policy is determined by the partition, the
+// account, the path and the name, so ReadOne can look the policy up the way
+// Role is looked up by name. A resource that is not managed yet (CreatePolicy
+// was never called for it, or failed) is left alone and stays NotFound, so a
+// policy that exists outside the controller is not taken over.
+func (rm *resourceManager) orphanedPolicyARN(
+	r *resource,
+) *ackv1alpha1.AWSResourceName {
+	if r.ko.Status.ACKResourceMetadata != nil &&
+		r.ko.Status.ACKResourceMetadata.ARN != nil {
+		return nil
+	}
+	if r.ko.Spec.Name == nil || rm.cfg.Partition == "" || rm.awsAccountID == "" {
+		return nil
+	}
+	if !(&resourceDescriptor{}).IsManaged(r) {
+		return nil
+	}
+	path := "/"
+	if r.ko.Spec.Path != nil && *r.ko.Spec.Path != "" {
+		path = *r.ko.Spec.Path
+	}
+	arn := ackv1alpha1.AWSResourceName(fmt.Sprintf(
+		"arn:%s:iam::%s:policy%s%s",
+		rm.cfg.Partition, rm.awsAccountID, path, *r.ko.Spec.Name,
+	))
+	return &arn
 }
