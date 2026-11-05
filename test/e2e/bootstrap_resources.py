@@ -24,6 +24,12 @@ from e2e import bootstrap_directory
 @dataclass
 class BootstrapResources(Resources):
     AdoptedPolicy: UserPolicies
+    # AdoptedPolicyForUpdate is a dedicated policy for tests that mutate the
+    # adopted policy's version (e.g. test_policy_adopt_update). Keeping it
+    # separate from AdoptedPolicy prevents a cross-test race under pytest-xdist:
+    # a mutating test bumping the shared policy to v2 would otherwise make a
+    # concurrent test that asserts the pristine v1 state flake.
+    AdoptedPolicyForUpdate: UserPolicies
     AdoptedRole: Role
     OIDCProviderUserPool: UserPool
 _bootstrap_resources = None

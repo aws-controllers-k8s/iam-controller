@@ -39,6 +39,7 @@ def service_bootstrap() -> Resources:
     })
     resources = BootstrapResources(
         AdoptedPolicy=UserPolicies("adopted-policies", policy_documents=[sample_policy]),
+        AdoptedPolicyForUpdate=UserPolicies("adopted-policies-for-update", policy_documents=[sample_policy]),
         AdoptedRole=Role("adopted-role", "eks.amazonaws.com", managed_policies=["arn:aws:iam::aws:policy/AmazonSQSFullAccess", "arn:aws:iam::aws:policy/AmazonEC2FullAccess"]),
         OIDCProviderUserPool=UserPool(name_prefix="oidc-test-pool")
     )

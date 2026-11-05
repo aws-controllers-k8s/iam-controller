@@ -24,6 +24,9 @@ operations:
     output_wrapper_field_path: Group
 resources:
   Group:
+    print:
+      add_age_column: true
+      add_synced_column: true
     hooks:
       sdk_read_one_post_set_output:
         template_path: hooks/group/sdk_read_one_post_set_output.go.tpl
@@ -75,6 +78,9 @@ resources:
     tags:
       ignore: true
   InstanceProfile:
+    print:
+      add_age_column: true
+      add_synced_column: true
     renames:
       operations:
         CreateInstanceProfile:
@@ -103,8 +109,6 @@ resources:
           resource: Role
           path: Spec.Name
     hooks:
-      delta_pre_compare:
-        code: compareTags(delta, a, b)
       sdk_create_post_set_output:
         template_path: hooks/instance_profile/sdk_create_post_set_output.go.tpl
       sdk_delete_pre_build_request:
@@ -117,6 +121,9 @@ resources:
     update_operation:
       custom_method_name: customUpdateInstanceProfile
   Policy:
+    print:
+      add_age_column: true
+      add_synced_column: true
     renames:
       operations:
         CreatePolicy:
@@ -148,6 +155,14 @@ resources:
         - InvalidInput
         - MalformedPolicyDocument
     fields:
+      # IAM has no rename API, and Policy's update path is fully custom (there
+      # is no UpdatePolicy operation) via customUpdatePolicy, which never
+      # checks for a Name delta. Without this, a changed Name is silently
+      # dropped: the old policy is left as-is in AWS, no error is surfaced,
+      # and the CR is (incorrectly) reported as Synced.
+      # See: https://github.com/aws-controllers-k8s/community/issues/2744
+      Name:
+        is_immutable: true
       # Left for historical purposes. It looks like late_initialize is was
       # causing the controller to infinitely requeue (every 5 seconds) when the
       # description was set to nil. Not it looks like this is not needed
@@ -184,6 +199,9 @@ resources:
         compare:
           is_ignored: true
   Role:
+    print:
+      add_age_column: true
+      add_synced_column: true
     hooks:
       delta_pre_compare:
         code: customPreCompare(delta, a, b)
@@ -216,6 +234,12 @@ resources:
           input_fields:
             RoleName: Name
     fields:
+      # IAM has no rename API and GetRole looks the role up by name, so changing
+      # Name makes the controller lose track of the role it created: the lookup
+      # 404s, a second role is created under the new name and the original is
+      # orphaned outside of ACK's management.
+      Name:
+        is_immutable: true
       MaxSessionDuration:
         late_initialize: {}
       PermissionsBoundary:
@@ -256,6 +280,9 @@ resources:
         compare:
           is_ignored: true
   OpenIDConnectProvider:
+    print:
+      add_age_column: true
+      add_synced_column: true
     hooks:
       delta_pre_compare:
         code: customPreCompare(delta, a, b)
@@ -282,12 +309,12 @@ resources:
           is_ignored: true
       Thumbprints:
         late_initialize: {}
-      Tags:
-        compare:
-          is_ignored: true
     update_operation:
       custom_method_name: customUpdateOpenIDConnectProvider
   User:
+    print:
+      add_age_column: true
+      add_synced_column: true
     hooks:
       delta_pre_compare:
         code: compareTags(delta, a, b)
@@ -348,6 +375,9 @@ resources:
         compare:
           is_ignored: true
   ServiceLinkedRole:
+    print:
+      add_age_column: true
+      add_synced_column: true
     tags:
       ignore: true
     hooks:

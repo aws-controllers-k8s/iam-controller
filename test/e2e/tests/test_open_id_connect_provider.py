@@ -177,6 +177,28 @@ class TestOpenIdConnectProvider:
         latest_tags = open_id_connect_provider.get_tags(oidc_provider_arn)
         assert tag.cleaned(latest_tags) == after_update_expected_tags
 
+        # Regression test for changing the *value* of an existing tag key.
+        # A changed value puts the key in both the add list (new key=value)
+        # and the delete list (old key=value), because tags are matched on
+        # key AND value. If tags are added before being removed,
+        # UntagOpenIDConnectProvider (which works by key only) deletes the
+        # freshly written tag and the key disappears entirely while the CR
+        # still reports ResourceSynced.
+        # See: https://github.com/aws-controllers-k8s/community/issues/3102
+        updates = {
+            "spec": {
+                "tags": [{"key": "key2", "value": "newval"}],
+            },
+        }
+        k8s.patch_custom_resource(ref, updates)
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+        k8s.wait_on_condition(ref, condition.CONDITION_TYPE_RESOURCE_SYNCED, "True")
+        condition.assert_synced(ref)
+
+        changed_value_expected_tags = [{"Key": "key2", "Value": "newval"}]
+        latest_tags = open_id_connect_provider.get_tags(oidc_provider_arn)
+        assert tag.cleaned(latest_tags) == changed_value_expected_tags
+
     def test_crud(self, oidc_provider):
         (ref, cr) = oidc_provider
 
