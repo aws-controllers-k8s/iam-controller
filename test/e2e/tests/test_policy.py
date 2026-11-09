@@ -17,6 +17,7 @@ import json
 import time
 
 import pytest
+from kubernetes import client
 from kubernetes.client.exceptions import ApiException
 
 from enum import Enum
@@ -106,7 +107,11 @@ def adopt_policy(request):
     adopted_resource = data.get('adopted_resource', 'AdoptedPolicy')
     resource_arn = getattr(get_bootstrap_resources(), adopted_resource).arns[0]
     replacements["POLICY_ADOPTION_NAME"] = resource_name
-    replacements["ADOPTION_FIELDS"] = f"{{\\\"arn\\\": \\\"{resource_arn}\\\"}}"
+    if data.get('adopt_by_name'):
+        adopted_name = resource_arn.split("/")[-1]
+        replacements["ADOPTION_FIELDS"] = f"{{\\\"name\\\": \\\"{adopted_name}\\\"}}"
+    else:
+        replacements["ADOPTION_FIELDS"] = f"{{\\\"arn\\\": \\\"{resource_arn}\\\"}}"
     replacements["POLICY_ADOPTION_NAME"] = resource_name
 
     resource_data = load_resource(
@@ -303,6 +308,18 @@ class TestPolicy:
         policy_doc = policy.get_version(policy_arn, "v2")["Document"]
         assert policy_doc == new_policy_doc
 
+    @pytest.mark.resource_data({'adoption-policy': ADOPT_ADOPTION_POLICY, 'filename': 'policy_adopt', 'resource_name': 'adopt-by-name', 'adopt_by_name': True})
+    def test_policy_adopt_by_name(self, adopt_policy):
+        ref, cr, policy_arn = adopt_policy
+
+        k8s.wait_on_condition(ref, "ACK.ResourceSynced", "True", wait_periods=5)
+
+        cr = k8s.get_resource(ref)
+        assert cr is not None
+        assert cr['spec']['name'] == policy_arn.split("/")[-1]
+        assert cr['status']['ackResourceMetadata']['arn'] == policy_arn
+        assert cr['status']['defaultVersionID'] == 'v1'
+
     @pytest.mark.resource_data({'adoption-policy': ADOPT_OR_CREATE_ADOPTION_POLICY, 'filename': 'policy_adopt_or_create', 'resource_name': 'adopt-or-create'})
     def test_policy_adopt_or_create(self, adopt_policy):
         ref, cr, policy_arn = adopt_policy
@@ -316,3 +333,114 @@ class TestPolicy:
         assert 'ackResourceMetadata' in cr['status']
         assert 'arn' in cr['status']['ackResourceMetadata']
         assert cr['status']['ackResourceMetadata']['arn'] == policy_arn
+
+    def test_existing_policy_by_name(self):
+        policy_name = random_suffix_name("existing-policy", 24)
+        ref = k8s.CustomResourceReference(
+            CRD_GROUP, CRD_VERSION, POLICY_RESOURCE_PLURAL,
+            policy_name, namespace="default",
+        )
+
+        replacements = REPLACEMENT_VALUES.copy()
+        replacements['POLICY_NAME'] = policy_name
+        replacements['POLICY_DESCRIPTION'] = "an existing policy"
+        resource_data = load_resource(
+            "policy_simple",
+            additional_replacements=replacements,
+        )
+        resource_data['metadata']['annotations'] = {
+            "services.k8s.aws/deletion-policy": "retain",
+        }
+        k8s.create_custom_resource(ref, resource_data)
+        k8s.wait_resource_consumed_by_controller(ref)
+        assert k8s.wait_on_condition(ref, condition.CONDITION_TYPE_RESOURCE_SYNCED, "True", wait_periods=5)
+        cr = k8s.get_resource(ref)
+        policy_arn = cr['status']['ackResourceMetadata']['arn']
+        policy_doc = cr['spec']['policyDocument']
+
+        _, deleted = k8s.delete_custom_resource(ref, period_length=DELETE_WAIT_AFTER_SECONDS)
+        assert deleted
+        assert policy.get(policy_arn) is not None
+
+        del resource_data['metadata']['annotations']
+        k8s.create_custom_resource(ref, resource_data)
+        k8s.wait_resource_consumed_by_controller(ref)
+        assert k8s.wait_on_condition(ref, condition.CONDITION_TYPE_TERMINAL, "True", wait_periods=5)
+        assert policy.get(policy_arn)['DefaultVersionId'] == 'v1'
+
+        _, deleted = k8s.delete_custom_resource(ref, period_length=DELETE_WAIT_AFTER_SECONDS)
+        assert deleted
+        assert policy.get(policy_arn) is not None
+
+        replacements = REPLACEMENT_VALUES.copy()
+        replacements['POLICY_ADOPTION_NAME'] = policy_name
+        replacements['ADOPTION_POLICY'] = ADOPT_OR_CREATE_ADOPTION_POLICY
+        replacements['ADOPTION_FIELDS'] = ""
+        resource_data = load_resource(
+            "policy_adopt_or_create",
+            additional_replacements=replacements,
+        )
+        annotations = resource_data['metadata']['annotations']
+        del annotations['services.k8s.aws/adoption-fields']
+        annotations['services.k8s.aws/deletion-policy'] = "delete"
+        resource_data['spec']['policyDocument'] = policy_doc
+
+        k8s.create_custom_resource(ref, resource_data)
+        k8s.wait_resource_consumed_by_controller(ref)
+        assert k8s.wait_on_condition(ref, condition.CONDITION_TYPE_RESOURCE_SYNCED, "True", wait_periods=5)
+
+        cr = k8s.get_resource(ref)
+        assert cr['status']['ackResourceMetadata']['arn'] == policy_arn
+        assert cr['status']['defaultVersionID'] == 'v1'
+
+        _, deleted = k8s.delete_custom_resource(ref, period_length=DELETE_WAIT_AFTER_SECONDS)
+        assert deleted
+        policy.wait_until_deleted(policy_arn)
+
+    def test_lost_arn_is_found_by_name(self):
+        # The controller created the policy, but its ARN never reached the
+        # status: the controller stopped right after CreatePolicy, or the
+        # status patch failed. The next reconcile finds the policy by its name
+        # instead of calling CreatePolicy again, which would fail with
+        # EntityAlreadyExists and leave the resource unmanaged.
+        policy_name = random_suffix_name("lost-arn-policy", 24)
+        ref = k8s.CustomResourceReference(
+            CRD_GROUP, CRD_VERSION, POLICY_RESOURCE_PLURAL,
+            policy_name, namespace="default",
+        )
+
+        replacements = REPLACEMENT_VALUES.copy()
+        replacements['POLICY_NAME'] = policy_name
+        replacements['POLICY_DESCRIPTION'] = "a policy whose ARN is lost"
+        resource_data = load_resource(
+            "policy_simple",
+            additional_replacements=replacements,
+        )
+        k8s.create_custom_resource(ref, resource_data)
+        k8s.wait_resource_consumed_by_controller(ref)
+        assert k8s.wait_on_condition(ref, condition.CONDITION_TYPE_RESOURCE_SYNCED, "True", wait_periods=5)
+        cr = k8s.get_resource(ref)
+        policy_arn = cr['status']['ackResourceMetadata']['arn']
+        finalizers = cr['metadata']['finalizers']
+
+        # Drop the ARN from the status.
+        client.CustomObjectsApi(k8s._get_k8s_api_client()).patch_namespaced_custom_object_status(
+            CRD_GROUP, CRD_VERSION, "default", POLICY_RESOURCE_PLURAL, policy_name,
+            {"status": {"ackResourceMetadata": {"arn": None}}},
+        )
+        cr = k8s.get_resource(ref)
+        assert 'arn' not in cr['status']['ackResourceMetadata']
+
+        # Change the tags so that the resource is reconciled again.
+        k8s.patch_custom_resource(ref, {"spec": {"tags": [{"key": "tag1", "value": "val2"}]}})
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        cr = k8s.get_resource(ref)
+        assert cr['status']['ackResourceMetadata'].get('arn') == policy_arn
+        assert cr['metadata'].get('finalizers') == finalizers
+        condition.assert_synced(ref)
+        assert tag.cleaned(policy.get_tags(policy_arn)) == [{"Key": "tag1", "Value": "val2"}]
+
+        _, deleted = k8s.delete_custom_resource(ref, period_length=DELETE_WAIT_AFTER_SECONDS)
+        assert deleted
+        policy.wait_until_deleted(policy_arn)
