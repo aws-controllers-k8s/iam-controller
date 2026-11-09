@@ -17,6 +17,7 @@ import json
 import time
 
 import pytest
+from kubernetes import client
 from kubernetes.client.exceptions import ApiException
 
 from enum import Enum
@@ -391,6 +392,54 @@ class TestPolicy:
         cr = k8s.get_resource(ref)
         assert cr['status']['ackResourceMetadata']['arn'] == policy_arn
         assert cr['status']['defaultVersionID'] == 'v1'
+
+        _, deleted = k8s.delete_custom_resource(ref, period_length=DELETE_WAIT_AFTER_SECONDS)
+        assert deleted
+        policy.wait_until_deleted(policy_arn)
+
+    def test_lost_arn_is_found_by_name(self):
+        # The controller created the policy, but its ARN never reached the
+        # status: the controller stopped right after CreatePolicy, or the
+        # status patch failed. The next reconcile finds the policy by its name
+        # instead of calling CreatePolicy again, which would fail with
+        # EntityAlreadyExists and leave the resource unmanaged.
+        policy_name = random_suffix_name("lost-arn-policy", 24)
+        ref = k8s.CustomResourceReference(
+            CRD_GROUP, CRD_VERSION, POLICY_RESOURCE_PLURAL,
+            policy_name, namespace="default",
+        )
+
+        replacements = REPLACEMENT_VALUES.copy()
+        replacements['POLICY_NAME'] = policy_name
+        replacements['POLICY_DESCRIPTION'] = "a policy whose ARN is lost"
+        resource_data = load_resource(
+            "policy_simple",
+            additional_replacements=replacements,
+        )
+        k8s.create_custom_resource(ref, resource_data)
+        k8s.wait_resource_consumed_by_controller(ref)
+        assert k8s.wait_on_condition(ref, condition.CONDITION_TYPE_RESOURCE_SYNCED, "True", wait_periods=5)
+        cr = k8s.get_resource(ref)
+        policy_arn = cr['status']['ackResourceMetadata']['arn']
+        finalizers = cr['metadata']['finalizers']
+
+        # Drop the ARN from the status.
+        client.CustomObjectsApi(k8s._get_k8s_api_client()).patch_namespaced_custom_object_status(
+            CRD_GROUP, CRD_VERSION, "default", POLICY_RESOURCE_PLURAL, policy_name,
+            {"status": {"ackResourceMetadata": {"arn": None}}},
+        )
+        cr = k8s.get_resource(ref)
+        assert 'arn' not in cr['status']['ackResourceMetadata']
+
+        # Change the tags so that the resource is reconciled again.
+        k8s.patch_custom_resource(ref, {"spec": {"tags": [{"key": "tag1", "value": "val2"}]}})
+        time.sleep(MODIFY_WAIT_AFTER_SECONDS)
+
+        cr = k8s.get_resource(ref)
+        assert cr['status']['ackResourceMetadata'].get('arn') == policy_arn
+        assert cr['metadata'].get('finalizers') == finalizers
+        condition.assert_synced(ref)
+        assert tag.cleaned(policy.get_tags(policy_arn)) == [{"Key": "tag1", "Value": "val2"}]
 
         _, deleted = k8s.delete_custom_resource(ref, period_length=DELETE_WAIT_AFTER_SECONDS)
         assert deleted
