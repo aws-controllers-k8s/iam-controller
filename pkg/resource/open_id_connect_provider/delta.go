@@ -54,13 +54,6 @@ func newResourceDelta(
 	if !ackcompare.MapStringStringEqual(desiredACKTags, latestACKTags) {
 		delta.Add("Spec.Tags", a.ko.Spec.Tags, b.ko.Spec.Tags)
 	}
-	if len(a.ko.Spec.Thumbprints) != len(b.ko.Spec.Thumbprints) {
-		delta.Add("Spec.Thumbprints", a.ko.Spec.Thumbprints, b.ko.Spec.Thumbprints)
-	} else if len(a.ko.Spec.Thumbprints) > 0 {
-		if !ackcompare.SliceStringPEqual(a.ko.Spec.Thumbprints, b.ko.Spec.Thumbprints) {
-			delta.Add("Spec.Thumbprints", a.ko.Spec.Thumbprints, b.ko.Spec.Thumbprints)
-		}
-	}
 
 	return delta
 }
