@@ -142,6 +142,18 @@ func customPreCompare(
 			}
 		}
 	}
+
+	// Thumbprints are optional on create, where IAM computes them, so an empty
+	// desired list expresses no opinion. Comparing it against the thumbprints
+	// IAM holds would call UpdateOpenIDConnectProviderThumbprint with an empty
+	// list, which the API rejects; an adopted provider hits this on every
+	// reconcile, as it is compared before its thumbprints are late initialized.
+	if len(a.ko.Spec.Thumbprints) > 0 {
+		if len(a.ko.Spec.Thumbprints) != len(b.ko.Spec.Thumbprints) ||
+			!ackcompare.SliceStringPEqual(a.ko.Spec.Thumbprints, b.ko.Spec.Thumbprints) {
+			delta.Add("Spec.Thumbprints", a.ko.Spec.Thumbprints, b.ko.Spec.Thumbprints)
+		}
+	}
 }
 
 // syncTags examines the Tags in the supplied OpenIDConnectProvider and calls the ListOpenIDConnectProviderTags,

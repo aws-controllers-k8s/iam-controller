@@ -307,6 +307,8 @@ resources:
           is_ignored: true
       Thumbprints:
         late_initialize: {}
+        compare:
+          is_ignored: true
     update_operation:
       custom_method_name: customUpdateOpenIDConnectProvider
   User:
